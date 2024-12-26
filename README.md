@@ -19,3 +19,48 @@ Image for charging in other docker images to get zsh as shell default for root o
 ## Upload docker image to dockerhub
 
 With github actions in repository it will be update automaticatlly in DockerHub with the tag of branches.
+
+## To use in other docker images
+
+Just add the next line in the Dockerfile to base the other image on this one.
+
+`` FROM cartagodocker/zsh:latest``
+
+## To add commands or text in the .zshrc file
+
+I added a script to the image that allows you to add commands or text to the .zshrc file context for all users.
+The are an zsh file "add_text_to_zshrc.sh" that you can use to add text to the .zshrc file in the container.
+
+for example:
+
+### Example usage:
+
+````zsh
+add_text_to_zshrc "alias my_command='echo Hi, Cartago!'".
+````
+
+### Example usage with --prepend flag:
+
+It can be used to add text to the beginning of the file.
+
+````zsh
+add_text_to_zshrc "alias my_command='echo Hi, Cartago!'" --prepend
+````
+
+### Example usage with multiline text:
+
+It can be used to add multiline text.
+
+````zsh
+add_text_to_zshrc "alias my_command='echo Hi, Cartago!'\nalias my_command2='echo Hi, Cartago!'" --prepend
+````
+
+### Other Example usage with multiline text:
+
+`````zsh
+add_text_to_zshrc <<EOF
+    alias my_command='echo Hi, Cartago!'
+    alias my_command2='echo Goodbye, Cartago!'
+    echo "This is a test"
+    ls -ln
+    EOF

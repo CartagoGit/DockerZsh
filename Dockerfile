@@ -2,6 +2,7 @@
 FROM ubuntu:24.04
 
 ARG TEMPLATE_HOME=/etc/skel
+ARG SCRIPTS_HOME=/usr/local/bin
 # Urls to install Oh my zsh, p10k and Eza
 ARG OH_MY_ZSH_URL=https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
 ARG P10K_URL=https://github.com/romkatv/powerlevel10k.git
@@ -15,6 +16,7 @@ ARG ZSH_BAT_URL=https://github.com/fdellwing/zsh-bat.git
 
 # Copy zsh and p10k config to template for existing users and new users
 COPY config/ ${TEMPLATE_HOME}/ 
+COPY scripts/ ${SCRIPTS_HOME}/
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gnupg wget git zsh bat eza ca-certificates \
@@ -38,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s /usr/bin/batcat ${TEMPLATE_HOME}/.local/bin/bat \
     # Change privs
     && chmod -R 755 ${TEMPLATE_HOME} \
+    && chmod -R 755 ${SCRIPTS_HOME} \
     # Apply configuration to existing users' home directories
     # Ensure the root user also gets the configuration
     && for dir in /home/* /root; do \
