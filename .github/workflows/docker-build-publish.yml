@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3  # Clonamos el repositorio para tener acceso al código.
+      uses: actions/checkout@v3  
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2  
@@ -24,10 +24,10 @@ jobs:
 
     - name: Build Docker image
       run: |
-        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"  # Usamos la etiqueta como tag para la imagen.
+        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
         docker build -t "$IMAGE_NAME" .  # Construimos la imagen de Docker.
 
     - name: Push Docker image
       run: |
-        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"  # Usamos la etiqueta como tag para la imagen.
+        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
         docker push "$IMAGE_NAME"  # Subimos la imagen a Docker Hub.
