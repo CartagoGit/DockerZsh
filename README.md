@@ -1,5 +1,11 @@
 # DockerZsh
 
+## DockerHub link
+
+https://hub.docker.com/repository/docker/cartagodocker/zsh
+
+## Description
+
 Image for charging in other docker images to get zsh as shell default for root or for other existing or new users in the containers.
 
 > This dockerfile use Ubuntu 24.04
