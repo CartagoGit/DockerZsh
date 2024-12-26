@@ -1,10 +1,7 @@
 # Base Ubuntu LTS
 FROM ubuntu:24.04
 
-ARG USER_UID=1000
-ARG USER_GID=1000
 ARG TEMPLATE_HOME=/etc/skel
-
 # Urls to install Oh my zsh, p10k and Eza
 ARG OH_MY_ZSH_URL=https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
 ARG P10K_URL=https://github.com/romkatv/powerlevel10k.git
@@ -20,7 +17,7 @@ ARG ZSH_BAT_URL=https://github.com/fdellwing/zsh-bat.git
 COPY config/ ${TEMPLATE_HOME}/ 
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl gnupg wget unzip build-essential git zsh bat eza ca-certificates \
+    curl gnupg wget git zsh bat eza ca-certificates \
     # Install zsh and oh-my-zsh
     && sh -c "$(curl -fsSL ${OH_MY_ZSH_URL})" \
     && mv /root/.oh-my-zsh ${TEMPLATE_HOME}/.oh-my-zsh \
@@ -41,20 +38,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s /usr/bin/batcat ${TEMPLATE_HOME}/.local/bin/bat \
     # Change privs
     && chmod -R 755 ${TEMPLATE_HOME} \
-     # Apply configuration to existing users' home directories
+    # Apply configuration to existing users' home directories
     # Ensure the root user also gets the configuration
     && for dir in /home/* /root; do \
             if [ -d "$dir" ]; then \
-                cp -r ${TEMPLATE_HOME}/.oh-my-zsh $dir/.oh-my-zsh; \
-                cp ${TEMPLATE_HOME}/.zshrc $dir/.zshrc; \
-                cp ${TEMPLATE_HOME}/.local/bin/bat $dir/.local/bin/bat
-                chown -R $(basename $dir):$(basename $dir) $dir/.oh-my-zsh $dir/.zshrc; \
+                cp -rf ${TEMPLATE_HOME}/.oh-my-zsh $dir/.oh-my-zsh; \
+                cp -f ${TEMPLATE_HOME}/.zshrc $dir/.zshrc; \
+                cp -f ${TEMPLATE_HOME}/.p10k.zsh $dir/.p10k.zsh; \
+                mkdir -p "$dir/.local/bin"; \
+                cp -f ${TEMPLATE_HOME}/.local/bin/bat $dir/.local/bin/bat; \
+                chown -R $(basename $dir):$(basename $dir) $dir; \
             fi; \
         done \
     # Clean cache and temps
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* tmp/* /root/.oh-my-zsh /root/.zshrc /root/.cache
+    && rm -rf /var/lib/apt/lists/* tmp/* /root/.cache 
 
-USER ${USER_UID}:${USER_GID}
 SHELL ["zsh", "-c"]
 ENTRYPOINT ["zsh"]
