@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:  # Definir variables de entorno a nivel de trabajo
-      IMAGE_NAME: "${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
+      IMAGE_TAG: "${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
       IMAGE_LATEST: "${{ secrets.DOCKERHUB_USERNAME }}/zsh:latest"
 
     steps:
