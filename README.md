@@ -74,12 +74,11 @@ add_text_to_zshrc <<EOF
     EOF
 `````
 
-### Example to use in other DockerFile
+### Example to use multiline in other DockerFile
 
 ````Dockerfile
 FROM cartagodocker/zsh:latest
-# Añade texto necesario para el correcto funcionamiento en el .zshrc
-# El script que lo permite esta en la imagen base de zsh (localizado en /usr/local/bin/add_text_to_zshrc)
+
 RUN add_text_to_zshrc <<EOF
     alias my_command='echo Hi, Cartago!'
     alias my_command2='echo Goodbye, Cartago!'
