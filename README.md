@@ -72,12 +72,11 @@ add_text_to_zshrc "alias my_command='echo Hi, Cartago!'\nalias my_command2='echo
 ### Other Example usage with multiline text:
 
 ````bash
-add_text_to_zshrc <<EOF
-    alias my_command='echo Hi, Cartago!'
-    alias my_command2='echo Goodbye, Cartago!'
-    echo "This is a test"
-    ls -ln
-    EOF
+add_text_to_zshrc "$(printf '%s\n' \
+    'alias my_command=\"echo Hi, Cartago!\"' \
+    'alias my_command2=\"echo Goodbye, Cartago!\"' \
+    'echo \"This is a test\"' \
+    'ls -ln')"
 `````
 
 ### Example to use multiline in other DockerFile
@@ -85,10 +84,9 @@ add_text_to_zshrc <<EOF
 ````Dockerfile
 FROM cartagodocker/zsh:latest
 
-RUN add_text_to_zshrc <<EOF
-    alias my_command='echo Hi, Cartago!'
-    alias my_command2='echo Goodbye, Cartago!'
-    echo "This is a test"
-    ls -ln
-EOF
+RUN add_text_to_zshrc "$(printf '%s\n' \
+    'alias my_command=\"echo Hi, Cartago!\"' \
+    'alias my_command2=\"echo Goodbye, Cartago!\"' \
+    'echo \"This is a test\"' \
+    'ls -ln')" --prepend
 ````
