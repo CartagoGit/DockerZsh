@@ -24,10 +24,12 @@ jobs:
 
     - name: Build Docker image
       run: |
-        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
-        docker build -t "$IMAGE_NAME" .  # Construimos la imagen de Docker.
+        IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
+        docker build -t "$IMAGE_TAG" .
 
     - name: Push Docker image
       run: |
-        IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
-        docker push "$IMAGE_NAME"  # Subimos la imagen a Docker Hub.
+        IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/zsh:${GITHUB_REF#refs/tags/}"
+        IMAGE_LATEST="${{ secrets.DOCKERHUB_USERNAME }}/zsh:latest"
+        docker push "$IMAGE_TAG" 
+        docker push "$IMAGE_LATEST"
