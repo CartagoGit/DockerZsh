@@ -6,15 +6,21 @@ Image for charging in other docker images to get zsh as shell default for root o
 
 ## Create Image
 
-``docker build -t zsh-image -f ./Dockerfile ./``
+````bash
+docker build -t zsh-image -f ./Dockerfile ./
+````
 
 ## Create debug-container
 
-``docker run --rm -it --name zsh-container zsh-image``
+````bash
+docker run --rm -it --name zsh-container zsh-image
+````
 
 ## Create debug-container for user 1000:1000
 
-``docker run --rm -it --name zsh-container --user 1000:1000 zsh-image``
+````bash
+docker run --rm -it --name zsh-container --user 1000:1000 zsh-image
+````
 
 ## Upload docker image to dockerhub
 
@@ -24,7 +30,9 @@ With github actions in repository it will be update automaticatlly in DockerHub 
 
 Just add the next line in the Dockerfile to base the other image on this one.
 
-`` FROM cartagodocker/zsh:latest``
+````Dockerfile 
+FROM cartagodocker/zsh:latest
+````
 
 ## To add commands or text in the .zshrc file
 
@@ -35,7 +43,7 @@ for example:
 
 ### Example usage:
 
-````zsh
+````bash
 add_text_to_zshrc "alias my_command='echo Hi, Cartago!'".
 ````
 
@@ -43,7 +51,7 @@ add_text_to_zshrc "alias my_command='echo Hi, Cartago!'".
 
 It can be used to add text to the beginning of the file.
 
-````zsh
+````bash
 add_text_to_zshrc "alias my_command='echo Hi, Cartago!'" --prepend
 ````
 
@@ -51,16 +59,31 @@ add_text_to_zshrc "alias my_command='echo Hi, Cartago!'" --prepend
 
 It can be used to add multiline text.
 
-````zsh
+````bash
 add_text_to_zshrc "alias my_command='echo Hi, Cartago!'\nalias my_command2='echo Hi, Cartago!'" --prepend
 ````
 
 ### Other Example usage with multiline text:
 
-`````zsh
+````bash
 add_text_to_zshrc <<EOF
     alias my_command='echo Hi, Cartago!'
     alias my_command2='echo Goodbye, Cartago!'
     echo "This is a test"
     ls -ln
     EOF
+`````
+
+### Example to use in other DockerFile
+
+````Dockerfile
+FROM cartagodocker/zsh:latest
+# Añade texto necesario para el correcto funcionamiento en el .zshrc
+# El script que lo permite esta en la imagen base de zsh (localizado en /usr/local/bin/add_text_to_zshrc)
+RUN add_text_to_zshrc <<EOF
+    alias my_command='echo Hi, Cartago!'
+    alias my_command2='echo Goodbye, Cartago!'
+    echo "This is a test"
+    ls -ln
+EOF
+````
