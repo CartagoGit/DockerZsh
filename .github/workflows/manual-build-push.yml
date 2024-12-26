@@ -1,0 +1,27 @@
+# .github/workflows/manual-build-push.yml
+name: Build and Push Docker Image (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag'
+        required: true
+        type: string
+      overwrite_tag:
+        description: 'Do you want to overwrite the tag?'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  call-build-push:
+    uses: ./.github/workflows/build-push.yml
+    with:
+      image_tag: '${{ secrets.DOCKERHUB_USERNAME }}/zsh:${{ github.event.inputs.tag }}'
+      overwrite_tag: ${{ github.event.inputs.overwrite_tag }}
+      dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+      dockerhub_password: ${{ secrets.DOCKERHUB_PASSWORD }}
