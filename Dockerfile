@@ -41,6 +41,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Change privs
     && chmod -R 755 ${TEMPLATE_HOME} \
     && chmod -R 755 ${SCRIPTS_HOME} \
+    # Add alias for any added scripts
+    && for script in ${SCRIPTS_HOME}/*.zsh; do \
+         if [ -f "$script" ]; then \
+           mv "$script" "${script%.zsh}"; \
+         fi; \
+       done \
     # Apply configuration to existing users' home directories
     # Ensure the root user also gets the configuration
     && for dir in /home/* /root; do \

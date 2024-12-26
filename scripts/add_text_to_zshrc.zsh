@@ -1,14 +1,16 @@
 #!/bin/zsh
 
 # Script to add text to the end of the .zshrc file
-TEXT="$1" 
-TEXT=$(echo -e "$TEXT")  # This will interpret \n as an actual new line
+TEXT=$(echo -e "$1")  # This will interpret \n as an actual new line
 PREPEND="$2"  # Second argument is the flag for prepending text - It add text at the beginning of the file
+echo "Texto recibido: $TEXT"
+echo "Flag recibido: $PREPEND"
+
 
 # Iterate over the .zshrc files
 for ZSHRC in /root/.zshrc /home/*/.zshrc; do
   if [ -f "$ZSHRC" ]; then
-    if [ "$PREPEND" == "--prepend" ]; then
+    if [[ "$PREPEND" == "--prepend" ]]; then
       # If --prepend flag is passed, add text at the beginning
       echo -e "$TEXT\n$(cat "$ZSHRC")" > "$ZSHRC"
     else
