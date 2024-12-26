@@ -73,9 +73,9 @@ add_text_to_zshrc "alias my_command='echo Hi, Cartago!'\nalias my_command2='echo
 
 ````bash
 add_text_to_zshrc "$(printf '%s\n' \
-    'alias my_command=\"echo Hi, Cartago!\"' \
-    'alias my_command2=\"echo Goodbye, Cartago!\"' \
-    'echo \"This is a test\"' \
+    'alias my_command="echo Hi, Cartago!"' \
+    'alias my_command2="echo Goodbye, Cartago!"' \
+    'echo "This is a test"' \
     'ls -ln')"
 `````
 
@@ -85,8 +85,8 @@ add_text_to_zshrc "$(printf '%s\n' \
 FROM cartagodocker/zsh:latest
 
 RUN add_text_to_zshrc "$(printf '%s\n' \
-    'alias my_command=\"echo Hi, Cartago!\"' \
-    'alias my_command2=\"echo Goodbye, Cartago!\"' \
-    'echo \"This is a test\"' \
+    'alias my_command="echo Hi, Cartago!"' \
+    'alias my_command2="echo Goodbye, Cartago!"' \
+    'echo "This is a test"' \
     'ls -ln')" --prepend
 ````
