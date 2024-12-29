@@ -59,6 +59,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
                 chown -R $(basename $dir):$(basename $dir) $dir; \
             fi; \
         done \
+    # Remove packages used to install and clean them
+    && apt-get remove --purge -y \
+    curl gnupg wget git ca-certificates \
+    && apt-get autoremove -y \
     # Clean cache and temps
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* tmp/* /root/.cache 
