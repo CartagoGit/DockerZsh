@@ -12,21 +12,21 @@ Image for charging in other docker images to get zsh as shell default for root o
 
 ## Create Image
 
-````bash
+```bash
 docker build -t zsh-image -f ./Dockerfile ./
-````
+```
 
 ## Create debug-container
 
-````bash
+```bash
 docker run --rm -it --name zsh-container zsh-image
-````
+```
 
 ## Create debug-container for user 1000:1000
 
-````bash
+```bash
 docker run --rm -it --name zsh-container --user 1000:1000 zsh-image
-````
+```
 
 ## Upload docker image to dockerhub
 
@@ -36,9 +36,9 @@ With github actions in repository it will be update automaticatlly in DockerHub 
 
 Just add the next line in the Dockerfile to base the other image on this one.
 
-````Dockerfile 
+```Dockerfile
 FROM cartagodocker/zsh:latest
-````
+```
 
 ## To add commands or text in the .zshrc file
 
@@ -49,39 +49,39 @@ for example:
 
 ### Example usage:
 
-````bash
+```bash
 add_text_to_zshrc "alias my_command='echo Hi, Cartago!'".
-````
+```
 
 ### Example usage with --prepend flag:
 
 It can be used to add text to the beginning of the file.
 
-````bash
+```bash
 add_text_to_zshrc "alias my_command='echo Hi, Cartago!'" --prepend
-````
+```
 
 ### Example usage with multiline text:
 
 It can be used to add multiline text.
 
-````bash
+```bash
 add_text_to_zshrc "alias my_command='echo Hi, Cartago!'\nalias my_command2='echo Hi, Cartago!'" --prepend
-````
+```
 
 ### Other Example usage with multiline text:
 
-````bash
+```bash
 add_text_to_zshrc "$(printf '%s\n' \
     'alias my_command="echo Hi, Cartago!"' \
     'alias my_command2="echo Goodbye, Cartago!"' \
     'echo "This is a test"' \
     'ls -ln')"
-`````
+```
 
 ### Example to use multiline in other DockerFile
 
-````Dockerfile
+```Dockerfile
 FROM cartagodocker/zsh:latest
 
 RUN add_text_to_zshrc "$(printf '%s\n' \
@@ -89,4 +89,35 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'alias my_command2="echo Goodbye, Cartago!"' \
     'echo "This is a test"' \
     'ls -ln')" --prepend
-````
+```
+
+## Fonts, ligatures and icons - theme
+
+### The zsh theme use [``nerdfonts``](https://www.nerdfonts.com/font-downloads).
+
+The image has been created with a config for `CaskaydiaCove Nerd Font` to look the theme correctly.
+
+[Donwload CaskaydiaCove Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip)
+
+You can try other nerdfont for your host terminal, but is possible it doesn't look correctly.
+
+[Link with all nerdfonts](https://www.nerdfonts.com/font-downloads)
+
+Install the font in your system and configure your terminal to use it.
+
+### To configure the font in the terminal
+
+Once you have installed the font in your system, you need to configure your terminal to use it.
+
+For example, to add in VsCode terminal.  add the next line in the `settings.json` vscode file:
+
+```json
+	"terminal.integrated.fontFamily": "'CaskaydiaCove Nerd Font'",
+```
+
+Or go to the VsCode settings and search for `terminal.integrated.fontFamily` and add the font name of your choice.
+
+
+Read documentation if you are using another terminal like `gnome-terminal`, `konsole`, `alacritty`, `powershell`, etc.
+
+Look your terminal configuration to add the font, like the before example.
