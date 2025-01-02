@@ -18,11 +18,11 @@ autoload -Uz compinit
 compinit
 
 # Load oh-my-zsh and plugins
-plugins=(fasd git vscode yarn zsh-autosuggestions zsh-completions nvm zsh-syntax-highlighting jsontools zsh-bat)
+plugins=(fasd git vscode zsh-autosuggestions zsh-completions zsh-syntax-highlighting jsontools zsh-bat)
 source $ZSH/oh-my-zsh.sh
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-#Config for eza (exa) and colors
+# Config for eza (exa) and colors
 alias ls='eza --icons --group-directories-first --color=always'
 export EXA_COLORS="uu=36:gu=37:sn=32:sb=32:da=34:ur=34:uw=35:ux=36:ue=36:gr=34:gw=35:gx=36:tr=34:tw=35:tx=36"
 export TERM=xterm-256color

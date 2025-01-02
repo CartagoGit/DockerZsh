@@ -44,18 +44,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && wget -qO- ${EZA_URL} | gpg --dearmor -o /etc/apt/keyrings/gierens.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | tee /etc/apt/sources.list.d/gierens.list \
     && chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list \
-    # Config Bat to change Cat
-    && mkdir -p ${ROOT_HOME}/.local/bin  \
-    && ln -s /usr/bin/batcat ${ROOT_HOME}/.local/bin/bat \
     # Change privs
     && chmod -R 755 ${SCRIPTS_HOME} \
     # Apply configuration to existing users' home directories
     # Ensure the root user also gets the configuration
-    && for dir in /home/* /root; do \
-            if [ -d "$dir" ]; then \
+    && for dir in /home/* /root /etc/skel; do \
+    if [ -d "$dir" ]; then \
+                # Config Bat to change Cat for every user
                 mkdir -p "$dir/.local/bin"; \
-                cp -f ${ROOT_HOME}/.local/bin/bat $dir/.local/bin/bat; \
-                chown -R $(basename $dir):$(basename $dir) $dir; \
+                ln -s /usr/bin/batcat $dir/.local/bin/bat; \
+                chown -R $(basename $dir):$(basename $dir) $dir || true;; \
             fi; \
         done \
     # Remove packages used to install and clean them
@@ -65,6 +63,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Clean cache and temps
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* tmp/*
+
+RUN  add_text_to_zshrc "Juas lo inyecta seguro" --prepend 
 
 SHELL ["zsh", "-c"]
 ENTRYPOINT ["zsh"]
