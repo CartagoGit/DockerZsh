@@ -91,6 +91,35 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'ls -ln')" --prepend
 ```
 
+## To share configuration between users in Dockerfile installations
+
+You can use the script `share-config-globaly` to share configuration between users in the container after install new dependencies or tools in inherit images.
+
+### Example usage:
+
+To share global installations with fnm.
+
+When you install fnm it will create a folder with files in `/root/.local/share/fnm` for the root user.
+
+But it will not be available for other users in the container. It could be a problem if you want to use fnm in other users and you need to install the node version for each user.
+
+I added a script in the image that allows you to share them easily.
+
+If you wish to share the configuration with other users, you can use the script `share-config-globaly` to copy the configuration to the `/etc/skel` folder for new users, and to the existing users in the image.
+
+Format:
+
+`share_config_globaly <source_path> [destination_name --default=name of the source folder] [root_path --default='/root']`
+
+#### Example usage:
+
+```
+share_config_globaly .local/share/fnm fnm /root
+```
+
+In this case `fnm` and `/root` will be the default values, so you can use the command without the last two parameters.
+
+
 ## Fonts, ligatures and icons - theme
 
 ### The zsh theme use [``nerdfonts``](https://www.nerdfonts.com/font-downloads).
