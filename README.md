@@ -219,7 +219,9 @@ Read documentation if you are using another terminal like `gnome-terminal`, `kon
 
 Look your terminal configuration to add the font, like the before example.
 
-## SSH
+---
+
+# SSH
 
 ## To use ssh in the container. (Neccesary for git with ssh config)
 
