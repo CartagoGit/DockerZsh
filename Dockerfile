@@ -35,8 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && git clone ${ZSH_SYNTAX_HIGHLIGHTING_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting \
     && git clone ${ZSH_BAT_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-bat \
     # Install Powerlevel10k
-    && git clone --depth=1 ${P10K_URL} ${ROOT_HOME}/.oh-my-zsh/themes/powerlevel10k 
-RUN echo googooo \
+    && git clone --depth=1 ${P10K_URL} ${ROOT_HOME}/.oh-my-zsh/themes/powerlevel10k  \
     && share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --base-src /root --permissions 755 \
     && share_config_globally .p10k.zsh --to globally/.p10k.zsh --permissions 755  \
     && share_config_globally .zshrc --to globally/.zshrc  \
