@@ -15,6 +15,10 @@ Image for charging in other docker images to get zsh as shell default for root o
 > This dockerfile use Ubuntu 24.04
 > This image has curl, wget, ssh and git installed.
 
+---
+
+# Usage
+
 ## Create Image
 
 ```bash
@@ -214,3 +218,31 @@ Or go to the VsCode settings and search for `terminal.integrated.fontFamily` and
 Read documentation if you are using another terminal like `gnome-terminal`, `konsole`, `alacritty`, `powershell`, etc.
 
 Look your terminal configuration to add the font, like the before example.
+
+## SSH
+
+## To use ssh in the container. (Neccesary for git with ssh config)
+
+If you have your ssh key in the default path `~/.ssh` you can use it. Otherwise you must to add the path to the ssh key in the container.
+
+Open container with the next command:
+
+```bash
+docker run --rm -it --name ionic-cover-container -v ~/.ssh:~/.ssh:ro ionic-cover-image
+```
+
+In other path;
+
+```bash
+docker run --rm -it --name ionic-cover-container -v ~/your_path/.ssh:~/.ssh:ro ionic-cover-image
+```
+
+Or with docker compose:
+
+```yaml
+services:
+    name_service:
+        image: cartagodocker/ionic-cover
+        volumes:
+            - ~/.ssh:/~/.ssh:ro
+```
