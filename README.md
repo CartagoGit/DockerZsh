@@ -107,7 +107,7 @@ It works like the `add_text_to_zshrc` script but it adds the text to the `.p10k.
 ### Example usage:
 
 ```bash
-  typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose
+add_text_to_zshrc "typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose"
 ```
 
 ## `share_config_globally` - To share configuration between users in Dockerfile installations
