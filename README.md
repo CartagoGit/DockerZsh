@@ -1,5 +1,9 @@
 # DockerZsh
 
+## Repository
+
+https://github.com/CartagoGit/DockerZsh
+
 ## DockerHub link
 
 https://hub.docker.com/repository/docker/cartagodocker/zsh
