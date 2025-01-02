@@ -53,7 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
                 # Config Bat to change Cat for every user
                 mkdir -p "$dir/.local/bin"; \
                 ln -s /usr/bin/batcat $dir/.local/bin/bat; \
-                chown -R $(basename $dir):$(basename $dir) $dir || true;; \
+                chown -R $(basename $dir):$(basename $dir) $dir || true; \
             fi; \
         done \
     # Remove packages used to install and clean them

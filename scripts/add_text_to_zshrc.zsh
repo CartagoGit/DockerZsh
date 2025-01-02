@@ -8,10 +8,10 @@ ZSHRC_HOME=/usr/share/globally/.zshrc
 
 if [[ "$PREPEND" == "--prepend" ]]; then
   # If --prepend flag is passed, add text at the beginning
-  echo -e "$TEXT\n$(cat "$ZSHRC_HOME")" > "$ZSHRC_HOME"
+  echo -e "$TEXT\n$(cat "$ZSHRC_HOME")" > "$ZSHRC_HOME";
 else
   # Default action: Add text to the end
-  echo -e "\n$TEXT" >> "$ZSHRC_HOME"
+  echo -e "\n$TEXT" >> "$ZSHRC_HOME";
 fi
 
 
