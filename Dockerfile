@@ -64,7 +64,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* tmp/*
 
-RUN  add_text_to_zshrc "Juas lo inyecta seguro" --prepend 
-
 SHELL ["zsh", "-c"]
 ENTRYPOINT ["zsh"]
