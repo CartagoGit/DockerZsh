@@ -35,10 +35,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && git clone ${ZSH_SYNTAX_HIGHLIGHTING_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting \
     && git clone ${ZSH_BAT_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-bat \
     # Install Powerlevel10k
-    && git clone --depth=1 ${P10K_URL} ${ROOT_HOME}/.oh-my-zsh/themes/powerlevel10k \
-    && zsh -c "share_config_globally .oh-my-zsh globally/.oh-my-zsh" \
-    && zsh -c "share_config_globally .p10k.zsh globally/.p10k.zsh"  \
-    && zsh -c "share_config_globally .zshrc globally/.zshrc"  \
+    && git clone --depth=1 ${P10K_URL} ${ROOT_HOME}/.oh-my-zsh/themes/powerlevel10k 
+RUN echo googooo \
+    && share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --base-src /root --permissions 755 \
+    && share_config_globally .p10k.zsh --to globally/.p10k.zsh --permissions 755  \
+    && share_config_globally .zshrc --to globally/.zshrc  \
     # Install Eza to show info and icons in terminal with colors in container
     && mkdir -p /etc/apt/keyrings \
     && wget -qO- ${EZA_URL} | gpg --dearmor -o /etc/apt/keyrings/gierens.gpg \

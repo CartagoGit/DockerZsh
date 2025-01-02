@@ -96,6 +96,16 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'ls -ln')" --prepend
 ```
 
+## `add_text_to_p10k` - To add commands or text in the .zshrc file
+
+It works like the `add_text_to_zshrc` script but it adds the text to the `.p10k.zsh` file.
+
+### Example usage:
+
+```bash
+  typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose
+```
+
 ## `share_config_globally` - To share configuration between users in Dockerfile installations
 
 You can use the script `share_config_globally` to share configuration between users in the container after install new dependencies or tools in inherit images.
@@ -110,16 +120,28 @@ But it will not be available for other users in the container. It could be a pro
 
 I added a script in the image that allows you to share them easily.
 
-If you wish to share the configuration with other users, you can use the script `share_config_globally` to copy the configuration to the `/etc/skel` folder for new users, and to the existing users in the image.
+If you wish to share the configuration with other users, you can use the script `share_config_globally` to symlink the configuration to the `/etc/skel` folder for new users, and to the existing users in the image.
 
 Format:
 
-`share_config_globally <source_path> [destination_name --default=name of the source folder] [root_path --default='/root']`
+```vbnet
+    Usage: share_config_globally <src> [--to <destination_name --default= source folder name] [--base-src <source_base_path --default='/root'] [--permissions <permissions --default='777']]
+
+    Parameters:
+        src             Path to the source file or folder (required) (Dont need to be the full path, just the path from the base folder, for example: /.local/share/fnm)
+      --to            Name of the destination folder (optional - default: source folder name)
+      --base-src      Path to the source file or folder (optional - default: /root)
+      --permissions   Permissions for the destination (optional, default: 777)
+
+    Example:
+        share_config_globally .local/share --to fnm --base-src /root --permissions 755
+
+```
 
 #### Example usage:
 
 ```
-share_config_globally .local/share/fnm fnm /root
+share_config_globally .local/share --to fnm --base-src /root --permissions 755
 ```
 
 In this case `fnm` and `/root` will be the default values, so you can use the command without the last two parameters.
@@ -152,7 +174,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && curl -fsSL ${BUN_URL} | bash \
     # It will create the folder /root/.bun
     # Then you can share the configuration with the next command
-    && share_config_globally .bun bun /root
+    && share_config_globally .bun --to bun --base-src /root --permissions 777
 ```
 
 
