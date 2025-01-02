@@ -62,7 +62,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get autoremove -y \
     # Clean cache and temps
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* tmp/*
+    && rm -rf '/var/lib/apt/lists/*' 'tmp/*'
 
 SHELL ["zsh", "-c"]
 ENTRYPOINT ["zsh"]
