@@ -40,7 +40,11 @@ Just add the next line in the Dockerfile to base the other image on this one.
 FROM cartagodocker/zsh:latest
 ```
 
-## To add commands or text in the .zshrc file
+---
+
+# Scripts
+
+## `add_text_to_zshrc` - To add commands or text in the .zshrc file
 
 I added a script to the image that allows you to add commands or text to the .zshrc file context for all users.
 The are an zsh file "add_text_to_zshrc.sh" that you can use to add text to the .zshrc file in the container.
@@ -91,9 +95,9 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'ls -ln')" --prepend
 ```
 
-## To share configuration between users in Dockerfile installations
+## `share_config_globally` - To share configuration between users in Dockerfile installations
 
-You can use the script `share-config-globaly` to share configuration between users in the container after install new dependencies or tools in inherit images.
+You can use the script `share_config_globally` to share configuration between users in the container after install new dependencies or tools in inherit images.
 
 ### Example usage:
 
@@ -105,22 +109,55 @@ But it will not be available for other users in the container. It could be a pro
 
 I added a script in the image that allows you to share them easily.
 
-If you wish to share the configuration with other users, you can use the script `share-config-globaly` to copy the configuration to the `/etc/skel` folder for new users, and to the existing users in the image.
+If you wish to share the configuration with other users, you can use the script `share_config_globally` to copy the configuration to the `/etc/skel` folder for new users, and to the existing users in the image.
 
 Format:
 
-`share_config_globaly <source_path> [destination_name --default=name of the source folder] [root_path --default='/root']`
+`share_config_globally <source_path> [destination_name --default=name of the source folder] [root_path --default='/root']`
 
 #### Example usage:
 
 ```
-share_config_globaly .local/share/fnm fnm /root
+share_config_globally .local/share/fnm fnm /root
 ```
 
 In this case `fnm` and `/root` will be the default values, so you can use the command without the last two parameters.
 
+#### Example usage in Dockerfile with fnm:
 
-## Fonts, ligatures and icons - theme
+```Dockerfile
+FROM cartagodocker/zsh:latest
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl unzip ca-certificates \
+    && curl -fsSL ${FNM_URL} -o /tmp/fnm.zip \
+    && mkdir -p ${FNM_BIN} \
+    && unzip /tmp/fnm.zip -d ${FNM_BIN} \
+    && chmod +x ${FNM_BIN}/fnm \
+    && fnm completions --shell zsh > ${FNM_BIN}/_fnm \
+    && fnm install ${NODE_DEFAULT_VERSION} \
+    && fnm default ${NODE_DEFAULT_VERSION} \
+    # It will create the folder /root/.local/share/fnm
+    # Then you can share the configuration with the next command
+    && share_config_globally .local/share/fnm
+```
+
+
+#### Other Example usage in Dockerfile with bun.js:
+
+```Dockerfile
+FROM cartagodocker/zsh:latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && curl -fsSL ${BUN_URL} | bash \
+    # It will create the folder /root/.bun
+    # Then you can share the configuration with the next command
+    && share_config_globally .bun bun /root
+```
+
+
+---
+
+# Fonts, ligatures and icons - theme
 
 ### The zsh theme use [``nerdfonts``](https://www.nerdfonts.com/font-downloads).
 
