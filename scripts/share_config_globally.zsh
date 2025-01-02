@@ -13,14 +13,14 @@ if [ -z "${SRC}" ]; then
     exit 1
 fi
 
-# Check if the source file exists
-if [ ! -e "${SRC}" ]; then
-    echo "The source file or folder does not exist."
-    exit 1
-fi
-
 # VARIABLES
+SKEL_DIR=/etc/skel
+IS_SRC_FOLDER=false
+SHARE_FOLDER=/usr/share
+FULL_DEST_DIR=${SHARE_FOLDER}/${DEST_DIR_NAME}
+ROOT_SRC=${ROOT}/${SRC}
 DIR_PATH=$(dirname ${SRC})
+FULL_DEST_DIR_PATH=$(dirname ${FULL_DEST_DIR})
 DIR_NAME=$(basename ${SRC})
 
 # If DEST_DIR_NAME is not passed, use the name of the source folder
@@ -28,38 +28,39 @@ if [ -z "${DEST_DIR_NAME}" ]; then
     DEST_DIR_NAME=${DIR_NAME}
 fi
 
-SKEL_DIR=/etc/skel
-IS_SRC_FOLDER=false
-SHARE_FOLDER=/usr/share
-FULL_DEST_DIR=${SHARE_FOLDER}/${DEST_DIR_NAME}
-ROOT_SRC=${ROOT}${SRC}
-
-
+# Check if the source file exists
+if [ ! -e "${ROOT_SRC}" ]; then
+    echo "The source file or folder does not exist."
+    exit 1
+fi
 
 # Change IS_SRC_FOLDER to true if the source is a folder
-if [ -d "${SRC}" ]; then
+if [ -d "${ROOT_SRC}" ]; then
     IS_SRC_FOLDER=true
 fi
 
 # Create the destination folder if it does not exist
-mkdir -p ${FULL_DEST_DIR} || { echo "Error creating ${FULL_DEST_DIR}"; exit 1; }
 # Move the file or folder to the destination
 if [ "${IS_SRC_FOLDER}" = true ]; then
+    setopt globdots # To move hidden files
+    mkdir -p ${FULL_DEST_DIR} || { echo "Error creating ${FULL_DEST_DIR}"; exit 1; }
     mv ${ROOT_SRC}/* ${FULL_DEST_DIR} || { echo "Error moving folder contents"; exit 1; }
+    unsetopt globdots # To stop moving hidden files
+    # If it is a folder, delete the original
+    rm -rf "${ROOT_SRC}" || echo "Error deleting ${ROOT_SRC}"
 else
+    mkdir -p ${FULL_DEST_DIR_PATH} || { echo "Error creating ${FULL_DEST_DIR_PATH}" ; exit 1; }
+    rm -rf ${FULL_DEST_DIR} || echo "Error deleting ${FULL_DEST_DIR}"
     mv ${ROOT_SRC} ${FULL_DEST_DIR} || { echo "Error moving file"; exit 1; }
 fi 
-# If it is a folder, delete the original
-if [ "${IS_SRC_FOLDER}" = true ]; then
-    rm -rf "${ROOT_SRC}" || echo "Error deleting ${ROOT_SRC}"
-fi
+
 # Give read and write permissions to the file/folder
-chmod -R 777 ${FULL_DEST_DIR} 
+chmod -R 755 ${FULL_DEST_DIR} 
 # Apply the symbolic link to existing users
 for dir in /home/* /root ${SKEL_DIR}; do 
     if [ -d "$dir" ]; then 
         mkdir -p $dir/${DIR_PATH}; 
         ln -s ${FULL_DEST_DIR} $dir/${SRC}; 
-        chown -R $(basename $dir):$(basename $dir) $dir; 
+        chown -R $(basename $dir):$(basename $dir) $dir || true;
     fi; 
 done

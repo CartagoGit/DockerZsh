@@ -9,6 +9,7 @@ https://hub.docker.com/repository/docker/cartagodocker/zsh
 Image for charging in other docker images to get zsh as shell default for root or for other existing or new users in the containers.
 
 > This dockerfile use Ubuntu 24.04
+> This image has curl, wget, ssh and git installed.
 
 ## Create Image
 
