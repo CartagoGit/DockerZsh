@@ -98,6 +98,13 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
 - `sudo-password` can change the password after one is already
   required: it escalates with `sudo` (current password), not only
   `sudo -n`. Same pattern as `sudo-nopasswd`.
+- Powerlevel10k `gitstatusd` is downloaded at **build** into
+  `/usr/share/gitstatus` (`GITSTATUS_CACHE_DIR`). Any uid sees it;
+  the first prompt does not print “fetching gitstatusd”.
+- Prompt colors: `docker run -t` injects `TERM=xterm` (8 colors).
+  v1.0.5 forced `TERM=xterm-256color` in `.zshrc`; a later change
+  kept the 8-color value (`${TERM:-…}`) so p10k segment backgrounds
+  vanished. Restored the v1.0.5 override (zshrc, profile, ENV).
 
 ### Removed
 - `fasd` plugin (binary was never installed).

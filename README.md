@@ -75,11 +75,16 @@ Needs a **TTY** (`-it` or `exec -it`).
 
 ```bash
 docker run --rm -it cartagodocker/zsh:v2.0.0
-docker run --rm -it --user 1000:1000 cartagodocker/zsh:v2.0.0
+docker run --rm -it --user 1000:1000 -w /home/ubuntu cartagodocker/zsh:v2.0.0
 docker exec -it <container> zsh
 ```
 
-`ls` → eza with icons/colors. `bat` works. Powerlevel10k draws the prompt. Inside zsh you can still `bash`, `sh`, `exit`.
+`ls` → eza with icons/colors. `bat` works. Powerlevel10k is the same
+**classic 2-line** wizard as v1.0.5 (`gitstatusd` is baked at build, so
+the first prompt does not fetch it). Starting in `/` shows a lock icon
+(`DIR_SHOW_WRITABLE`) because `/` is not writable for uid 1000 — use
+`-w /home/ubuntu` or bind your project. Inside zsh you can still
+`bash`, `sh`, `exit`.
 
 ### 🧊 Keep-alive (Compose)
 

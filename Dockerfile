@@ -106,6 +106,12 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
     && share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --base-src /root --permissions 755 \
     && share_config_globally .p10k.zsh --to globally/.p10k.zsh --permissions 644 \
     && share_config_globally .zshrc --to globally/.zshrc --permissions 644 \
+    && install -d -m 0755 /usr/share/gitstatus \
+    && GITSTATUS_CACHE_DIR=/usr/share/gitstatus \
+         /usr/share/globally/.oh-my-zsh/themes/powerlevel10k/gitstatus/install -f \
+    && chmod a+rX /usr/share/gitstatus \
+    && find /usr/share/gitstatus -type f -exec chmod a+r {} + \
+    && find /usr/share/gitstatus -type f -name 'gitstatusd*' -exec chmod a+rx {} + \
     && ln -sfn /usr/bin/batcat /usr/local/bin/bat \
     && ln -sfn /usr/bin/fdfind /usr/local/bin/fd \
     && chsh -s /usr/bin/zsh root \
@@ -128,6 +134,8 @@ ENV VERSION=${VERSION} \
     SHELL=/usr/bin/zsh \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
-    GIT_SSH_COMMAND=/usr/local/bin/ssh
+    TERM=xterm-256color \
+    GIT_SSH_COMMAND=/usr/local/bin/ssh \
+    GITSTATUS_CACHE_DIR=/usr/share/gitstatus
 SHELL ["/bin/sh", "-c"]
 CMD ["/usr/bin/zsh"]

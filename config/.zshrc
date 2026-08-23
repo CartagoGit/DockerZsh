@@ -4,6 +4,10 @@
 DISABLE_UPDATE_PROMPT=true
 DISABLE_AUTO_UPDATE=true
 
+# gitstatusd baked at /usr/share/gitstatus (any uid). Set before p10k.
+: "${GITSTATUS_CACHE_DIR:=/usr/share/gitstatus}"
+export GITSTATUS_CACHE_DIR
+
 # p10k instant prompt tiene que ir arriba del todo (requisito de p10k).
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
@@ -47,7 +51,9 @@ done
 unset _fzf_cmp
 export EZA_COLORS="uu=36:gu=37:sn=32:sb=32:da=34:ur=34:uw=35:ux=36:ue=36:gr=34:gw=35:gx=36:tr=34:tw=35:tx=36"
 export EXA_COLORS="$EZA_COLORS"
-export TERM="${TERM:-xterm-256color}"
+# docker run -t injects TERM=xterm (8 colors). p10k classic uses 256-color
+# backgrounds (same force as v1.0.5). Keep the override.
+export TERM=xterm-256color
 if [[ -z "${LANG}" || "${LANG}" == "C" || "${LANG}" == "POSIX" ]]; then
   export LANG=C.UTF-8
 fi

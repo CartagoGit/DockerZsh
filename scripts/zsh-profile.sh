@@ -11,10 +11,17 @@ if [ -z "${LC_ALL:-}" ]; then
   LC_ALL=C.UTF-8
   export LC_ALL
 fi
+# docker run -t injects TERM=xterm (8 colors). Same override as v1.0.5 zshrc.
+TERM=xterm-256color
+export TERM
 
 # Child images may overwrite VERSION. Keep the zsh tag if Docker ENV survived.
 if [ -n "${ZSH_IMAGE_VERSION:-}" ]; then
   export ZSH_IMAGE_VERSION
+fi
+if [ -z "${GITSTATUS_CACHE_DIR:-}" ]; then
+  GITSTATUS_CACHE_DIR=/usr/share/gitstatus
+  export GITSTATUS_CACHE_DIR
 fi
 
 if [ -x /usr/local/bin/apply-sudo-password-on-boot.sh ]; then

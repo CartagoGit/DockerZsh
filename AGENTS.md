@@ -31,9 +31,6 @@ This is **not** a repo bug. The tree is valid UTF-8. The Grok provider serialize
 
 Tracker: `FIXES.md` — **No planned fixes** in the tree.
 
-Working tree is **v2.0.0**, not on Hub yet. Publish when you want:
-`git tag v2.0.0` + workflow (blocker for NodeBun).
-
-Do not revert `FROM`/VERSION to 1.0.5. Do not retag Hub `v1.0.5`. No Docker CLI in this image (install in a child if needed).
+No Docker CLI in this image (install in a child if needed).
 
 **Publish order:** Hub zsh `v2.0.0` first, then NodeBun (`FROM cartagodocker/zsh:v2.0.0`).
