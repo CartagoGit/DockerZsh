@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- README wording tightened so Hub `full_description` stays under
+  ~25 000 characters (same inventory). Utilities tables are
+  **name → docs URL** (upstream descriptions stay on the linked
+  site; image caveats stay in the intro). Workflow fails before
+  PATCH if `wc -m README.md` is over 25000. A `main` push that
+  does not change `README.md` does not run the Hub description job.
+
 ### Added
 - GitHub Release on tag push (`docker-hub-update.yml`). If a Release
   for that tag already exists, it is deleted and recreated. Hub is

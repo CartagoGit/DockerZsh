@@ -12,3 +12,7 @@ per-uid `known_hosts`, `dockerzsh` skips helper probes / `ssh -V` is meta.
 
 Tag **`v2.0.0`**. Pin `cartagodocker/zsh:v2.0.0`. Do not retag
 `v1.0.5`. NodeBun uses `FROM cartagodocker/zsh:v2.0.0`.
+
+Hub `full_description` max ~25 000 chars (`wc -m README.md`). Over
+that, the description workflow authenticates then PATCH 400. Keep
+the inventory; summarize wording. See `AGENTS.md`.
