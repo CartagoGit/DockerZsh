@@ -1,0 +1,237 @@
+#!/bin/sh
+# Make host SSH keys usable for this uid, invisibly.
+#
+# OpenSSH refuses private keys that are 644/777 (Docker Desktop / Windows
+# bind-mounts) and cannot append known_hosts on a :ro volume. `test -w` is
+# also a lie on some :ro binds (it checks inode mode, not the mount flag).
+#
+# Natural contract: bind-mount the host dir onto some ~/.ssh inside the
+# container, then type `ssh`. This script copies identities into a 700
+# dir this uid owns; ssh-wrap points OpenSSH at that copy. No extra path
+# to learn. Works whether you enter as root or as another user.
+#
+# Sources (first that has files):
+#   $SSH_KEYS_DIR
+#   $HOME/.ssh
+#   any bind-mount whose target ends in .ssh  (Compose ~/.ssh:/${USER}/.ssh:ro
+#     lands at /cartago/.ssh — that is NOT $HOME and NOT the container $USER)
+#   /root/.ssh, /home/*/.ssh, then /<top>/.ssh (host USER name)
+#   /mnt/host-ssh (leftover; not required)
+#
+# Writes $dest/{config,env}. ssh-wrap sources env.
+set -eu
+
+log() {
+  if [ "${SSH_FROM_HOST_VERBOSE:-}" = 1 ]; then
+    echo "ssh-from-host: $*" >&2
+  fi
+}
+
+uid=$(id -u)
+dest="${SSH_FROM_HOST_DEST:-/tmp/container-ssh-${uid}}"
+envf="${dest}/env"
+home_ssh="${HOME:-/root}/.ssh"
+
+is_private_key() {
+  _f=$1
+  case "$_f" in
+    *.pub|*.ppk) return 1 ;;
+  esac
+  _base=$(basename "$_f")
+  case "$_base" in
+    known_hosts*|config*|authorized_keys*|environment*|*.old|*.bak) return 1 ;;
+  esac
+  grep -q -E -- 'BEGIN .*PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY' "$_f" 2>/dev/null || return 1
+  return 0
+}
+
+dir_has_files() {
+  [ -d "$1" ] || return 1
+  for _f in "$1"/*; do
+    [ -f "$_f" ] || continue
+    return 0
+  done
+  return 1
+}
+
+# First directory that actually has files. `try` sets _hit; pick_src
+# prints it once. Do not `return` from the mountinfo loop — in a
+# `$(pick_src)` subshell that only ends the `while`, and you would
+# keep scanning (or print several paths).
+try() {
+  [ -n "${_hit:-}" ] && return 0
+  _d=$1
+  [ -n "$_d" ] || return 0
+  dir_has_files "$_d" || return 0
+  _hit=$_d
+  return 0
+}
+
+pick_src() {
+  _hit=
+  if [ -n "${SSH_KEYS_DIR:-}" ]; then
+    try "$SSH_KEYS_DIR"
+  fi
+  try "$home_ssh"
+  if [ -z "${_hit:-}" ] && [ -r /proc/self/mountinfo ]; then
+    exec 3< /proc/self/mountinfo
+    while read -r _id _par _dev _root mnt _rest <&3; do
+      case "$mnt" in
+        *.ssh|*/.ssh)
+          try "$mnt"
+          if [ -n "${_hit:-}" ]; then
+            break
+          fi
+          ;;
+      esac
+    done
+    exec 3<&-
+  fi
+  if [ -z "${_hit:-}" ]; then
+    try /root/.ssh
+  fi
+  if [ -z "${_hit:-}" ]; then
+    for _d in /home/*/.ssh; do
+      [ -d "$_d" ] || continue
+      try "$_d"
+      [ -n "${_hit:-}" ] && break
+    done
+  fi
+  # ~/.ssh:/${USER}/.ssh:ro → /cartago/.ssh (host USER, not $HOME).
+  # Top-level dirs only; skip FHS / kernel mounts.
+  if [ -z "${_hit:-}" ]; then
+    for _top in /*; do
+      [ -d "$_top" ] || continue
+      case "$_top" in
+        /proc|/sys|/dev|/run|/tmp|/mnt|/media|/opt|/usr|/var|/boot|/snap|/etc|/lib|/lib32|/lib64|/bin|/sbin|/root|/home|/lost+found)
+          continue
+          ;;
+      esac
+      try "${_top}/.ssh"
+      [ -n "${_hit:-}" ] && break
+    done
+  fi
+  if [ -z "${_hit:-}" ]; then
+    try /mnt/host-ssh
+  fi
+  [ -n "${_hit:-}" ] || return 1
+  printf '%s\n' "$_hit"
+}
+
+src=
+src=$(pick_src) || src=
+
+if [ -z "$src" ]; then
+  # Agent-only, or no keys. Wrappers still source env.
+  mkdir -p "$dest"
+  chmod 700 "$dest" 2>/dev/null || true
+  {
+    echo "GIT_SSH_COMMAND=/usr/local/bin/ssh"
+    echo "export GIT_SSH_COMMAND"
+    if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+      echo "CONTAINER_SSH_KEYS=ok"
+    else
+      echo "CONTAINER_SSH_KEYS=missing"
+    fi
+    echo "export CONTAINER_SSH_KEYS"
+  } >"$envf"
+  chmod 600 "$envf" 2>/dev/null || true
+  log "no host keys under ~/.ssh"
+  exit 0
+fi
+
+mkdir -p "$dest"
+chmod 700 "$dest"
+# Recreate copies so a re-run picks up host key rotations.
+# Keep known_hosts: accept-new appends here. The :ro bind cannot
+# receive those lines, and wiping would drop them on every ssh.
+find "$dest" -mindepth 1 -maxdepth 1 ! -name env ! -name known_hosts \
+  -exec rm -rf {} + 2>/dev/null || true
+
+identities=
+for _k in "$src"/*; do
+  [ -e "$_k" ] || continue
+  [ -f "$_k" ] || continue
+  _base=$(basename "$_k")
+  case "$_base" in
+    known_hosts*|authorized_keys*|environment*|*.old|*.bak) continue ;;
+    config)
+      # Rewrite ~/.ssh/ paths so Host IdentityFile lines hit the 600 copies.
+      sed -e "s#~/.ssh/#${dest}/#g" \
+          -e "s#\$HOME/.ssh/#${dest}/#g" \
+          -e "s#[^[:blank:]\"']*/\\.ssh/#${dest}/#g" \
+          "$_k" >"${dest}/config.host"
+      chmod 600 "${dest}/config.host"
+      continue
+      ;;
+  esac
+  cp -f "$_k" "${dest}/${_base}"
+  if is_private_key "${dest}/${_base}"; then
+    chmod 600 "${dest}/${_base}"
+    identities="$identities ${dest}/${_base}"
+  else
+    chmod 644 "${dest}/${_base}"
+  fi
+done
+
+{
+  echo "# generated by ssh-from-host — do not edit"
+  echo "# -F this file ignores /etc/ssh/ssh_config, so keep global hosts here."
+  echo "Host *"
+  echo "  GlobalKnownHostsFile /usr/share/ssh/known_hosts /etc/ssh/ssh_known_hosts"
+  echo "  UserKnownHostsFile ${dest}/known_hosts"
+  echo "  StrictHostKeyChecking accept-new"
+  echo "  HashKnownHosts no"
+  echo "  IdentitiesOnly no"
+  if [ -n "$identities" ]; then
+    for _id in $identities; do
+      echo "  IdentityFile ${_id}"
+    done
+  fi
+  if [ -f "${dest}/config.host" ]; then
+    echo "Include ${dest}/config.host"
+  fi
+} >"${dest}/config"
+chmod 600 "${dest}/config"
+
+# Host known_hosts comes in on the same :ro bind as the keys. Copy it
+# once; later runs merge host lines in and keep container-learned hosts.
+if [ -f "$src/known_hosts" ] && [ -r "$src/known_hosts" ]; then
+  if [ ! -s "${dest}/known_hosts" ]; then
+    cp -f "$src/known_hosts" "${dest}/known_hosts" 2>/dev/null || :
+  else
+    while IFS= read -r _line || [ -n "${_line}" ]; do
+      [ -n "$_line" ] || continue
+      case "$_line" in
+        \#*) continue ;;
+      esac
+      grep -Fqx "$_line" "${dest}/known_hosts" 2>/dev/null && continue
+      printf '%s\n' "$_line" >>"${dest}/known_hosts"
+    done <"$src/known_hosts"
+  fi
+fi
+touch "${dest}/known_hosts"
+chmod 644 "${dest}/known_hosts"
+# /usr/bin/ssh (no -F) uses ssh_config.d UserKnownHostsFile with %i
+# → this same path. Do not copy to a shared file (would mix uids).
+
+if command -v dos2unix >/dev/null 2>&1; then
+  find "$dest" -type f ! -name env -exec dos2unix -q {} + 2>/dev/null || true
+fi
+
+{
+  echo "SSH_CONFIG_FILE=${dest}/config"
+  echo "export SSH_CONFIG_FILE"
+  echo "GIT_SSH_COMMAND=/usr/local/bin/ssh"
+  echo "export GIT_SSH_COMMAND"
+  if [ -n "$identities" ] || [ -n "${SSH_AUTH_SOCK:-}" ]; then
+    echo "CONTAINER_SSH_KEYS=ok"
+  else
+    echo "CONTAINER_SSH_KEYS=missing"
+  fi
+  echo "export CONTAINER_SSH_KEYS"
+} >"$envf"
+chmod 600 "$envf"
+
+log "copied keys from $src -> $dest"
+exit 0

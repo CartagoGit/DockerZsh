@@ -1,0 +1,71 @@
+#!/bin/sh
+# Invisible PATH wrapper for ssh / scp / sftp.
+# Copies a :ro ~/.ssh overlay into a 700 dir this uid owns, then execs
+# the real OpenSSH binary with -F. Type `ssh`; do not learn extra paths.
+set -eu
+cmd=$(basename "$0")
+real="/usr/bin/${cmd}"
+if [ ! -x "$real" ]; then
+  echo "ssh-wrap: ${real} not found" >&2
+  exit 127
+fi
+if [ -x /usr/local/bin/ssh-from-host ]; then
+  /usr/local/bin/ssh-from-host || true
+fi
+uid=$(id -u)
+envf="${SSH_FROM_HOST_DEST:-/tmp/container-ssh-${uid}}/env"
+if [ -r "$envf" ]; then
+  # shellcheck disable=SC1090
+  . "$envf"
+fi
+
+ssh_is_meta() {
+  [ $# -eq 0 ] && return 0
+  for a in "$@"; do
+    case "$a" in
+      -V|-h|--help|-G|--version) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+if [ "${CONTAINER_SSH_KEYS:-}" = "missing" ] && ! ssh_is_meta "$@"; then
+  # Hint only — OpenSSH still runs and prints its own error.
+  cat <<'EOF' >&2
+ssh-wrap: host SSH keys are required (or an agent). None found.
+
+  Bind the host keys into the container once. The destination can be
+  ANY absolute path that ends in .ssh — not only $HOME, not only
+  /${USER}/.ssh. The wrapper scans bind-mounts.
+
+  Example (usual):
+
+    volumes:
+      - ~/.ssh:/${USER}/.ssh:ro
+
+    docker run -v "$HOME/.ssh:/$USER/.ssh:ro" …
+
+  Same keys, other folder:
+
+    volumes:
+      - ~/.ssh:/mnt/host-ssh:ro
+      # or: - /opt/my-keys:/keys/.ssh:ro
+
+  The container path must be absolute (leading /). ${USER} is the
+  HOST name if you use that example.
+
+  Agent instead of files: mount $SSH_AUTH_SOCK and set SSH_AUTH_SOCK.
+  Details: dockerzsh --network
+EOF
+fi
+
+has_f=0
+for a in "$@"; do
+  case "$a" in
+    -F|-F*) has_f=1 ;;
+  esac
+done
+if [ "$has_f" = 0 ] && [ -n "${SSH_CONFIG_FILE:-}" ] && [ -f "$SSH_CONFIG_FILE" ]; then
+  exec "$real" -F "$SSH_CONFIG_FILE" "$@"
+fi
+exec "$real" "$@"

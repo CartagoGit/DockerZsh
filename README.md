@@ -1,276 +1,325 @@
-# DockerZsh
+# 🐳 cartagodocker/zsh
 
-## Repository
+Ubuntu **24.04 LTS** with **zsh** as the default interactive shell — Oh My Zsh, Powerlevel10k, eza, bat, git, and passwordless sudo.
 
-https://github.com/CartagoGit/DockerZsh
+Base image for others (for example [`cartagodocker/nodebun`](https://hub.docker.com/r/cartagodocker/nodebun)). Root, uid `1000` (`ubuntu`), and later `useradd -m` users share the same `.zshrc` / `.p10k.zsh` / Oh My Zsh via `/usr/share/globally`.
 
-## DockerHub link
+The [nodebun README](https://github.com/CartagoGit/DockerNodeBun#readme) uses the **same section order**. This page is the contract for the shell base; NodeBun only documents runtimes it adds.
 
-https://hub.docker.com/repository/docker/cartagodocker/zsh
+| | |
+|---|---|
+| 📦 GitHub | https://github.com/CartagoGit/DockerZsh |
+| 🐋 Docker Hub | https://hub.docker.com/r/cartagodocker/zsh |
+| 📝 Changelog | [CHANGELOG.md](./CHANGELOG.md) |
 
-## Description
+Pin a **version tag**. Do not use `latest` in production Dockerfiles.
 
-Image for charging in other docker images to get zsh as shell default for root or for other existing or new users in the containers.
+```dockerfile
+FROM cartagodocker/zsh:v2.0.0
+```
 
-> Ubuntu 24.04. zsh + Oh My Zsh + Powerlevel10k. eza (fork activo de exa) y bat.
-> curl, wget, git, openssh-client, ca-certificates, sudo (NOPASSWD). bash y sh siguen disponibles.
-> `LANG=C.UTF-8`. Iconos de eza/p10k necesitan Nerd Font en **el terminal del host**.
+Pin **`v2.0.0`**. There is no `latest`.
 
 ---
 
-# Usage
+## 📦 What's in the image
 
-## Create Image
+| | Piece | Notes |
+|---|---|---|
+| 🐧 | OS | Ubuntu 24.04 LTS (Noble) |
+| 🐚 | Interactive shell | zsh + Oh My Zsh + Powerlevel10k — `CMD ["/usr/bin/zsh"]` |
+| 💻 | Other shells | `bash` and `sh` (dash) stay installed |
+| 📂 | Listing / pager | `eza` (ls), `bat` (cat), GNU `find` + `fd`, `rg`, `nnn`, `ncdu`/`duf` |
+| 🧰 | Daily CLI | archives, `jq`/`jo`/`sqlite3`, `ip`/`ss`/`openssl`, `tmux`, `make`, `vi`/`nano`, `fzf`/`zoxide` — see `dockerzsh --help` |
+| 📖 | Catalogue | `dockerzsh --help` — lists every tool; filter with `dockerzsh --shells` (see [Catalogue CLI](#catalogue-cli-dockerzsh)) |
+| 🌐 | Network | `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`**, `ip`/`ss`, `socat`, `tcpdump` |
+| 🔐 | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
+| 🌍 | Locale | `LANG=C.UTF-8` · `LC_ALL=C.UTF-8` |
+| 🧱 | Build `SHELL` | `["/bin/sh", "-c"]` — child `RUN` lines are POSIX, not zsh |
+
+There is **no** `openssh-server`. There is **no** `ENTRYPOINT`: the process you pass to `docker run` / Compose `command:` is what runs.
+
+**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, `file`, `7zip`, `xmllint`, `git-extras`, `gpg`/`gnupg`, `expect`/Tcl, `dig`/`nslookup` (`bind9-dnsutils` / `libicu`), `iperf3`, `rlwrap`, **no sshd**, **no Docker** (`dockerd` / `docker` CLI). Put those — or a Docker client — in a child image. Drive this container with `docker` on the **host**. Commit signing / `git-extras` belong on the host or in a child.
+
+Container IP: `ip -4 addr`. DNS in use: `/etc/resolv.conf`. Resolve a name: `getent hosts github.com` (same resolver as `curl`/`git`).
+
+The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…). Extra toys (`tcpdump`/`htpasswd`) stay because they are small. Do **not** add `git-lfs`, `rclone`, `neovim`, or a Docker client here.
+
+---
+
+## 📏 Image size
+
+| | Uncompressed (disk / `docker images`) | Compressed (Hub pull / layers) |
+|---|---|---|
+| `ubuntu:24.04` | ~78 MB | ~28 MB |
+| Hub `zsh:v1.0.5` | ~205 MB | ~76 MB |
+| `zsh:v2.0.0` | ~**249 MB** (`zsh-local:dev`) | Hub gzip layers |
+
+v1.0.5 was zsh + eza/bat/git and little else. v2.0.0 adds a daily-driver kit without ICU/Python/`gnupg`/`7zip`. Ubuntu `git` still pulls **Perl**.
+
+Not shipped (child image if needed): `xmllint`, `git-extras`, `file`, `7zip`, `gpg`, `expect`/Tcl, `dig`/`nslookup`, `iperf3`, `rlwrap`. `rsync` stays (C binary; no Python / `rrsync`).
+
+`docker images` is uncompressed. Hub pull is gzip layers (smaller). Oh My Zsh + p10k clones are in both 1.0.5 and 2.0.0.
+
+---
+
+## ▶️ How to run it
+
+Two different jobs. Mix them up and it looks like “eza is broken”.
+
+### 🖥️ Interactive prompt (eza, bat, p10k)
+
+Needs a **TTY** (`-it` or `exec -it`).
 
 ```bash
-docker build -t zsh-image -f ./Dockerfile ./
+docker run --rm -it cartagodocker/zsh:v2.0.0
+docker run --rm -it --user 1000:1000 -w /home/ubuntu cartagodocker/zsh:v2.0.0
+docker exec -it <container> zsh
 ```
 
-## Create debug-container
+`ls` → eza with icons/colors. `bat` works. Powerlevel10k is the same
+**classic 2-line** wizard as v1.0.5 (`gitstatusd` is baked at build, so
+the first prompt does not fetch it). Starting in `/` shows a lock icon
+(`DIR_SHOW_WRITABLE`) because `/` is not writable for uid 1000 — use
+`-w /home/ubuntu` or bind your project. Inside zsh you can still
+`bash`, `sh`, `exit`.
+
+### 🧊 Keep-alive (Compose)
+
+The container stays up **without** a shell. Typical:
+
+```yaml
+services:
+  app:
+    image: cartagodocker/zsh:v2.0.0
+    command: ["tail", "-f", "/dev/null"]
+    user: "1000:1000"
+```
+
+That process is **`tail`, not zsh**, and **not a TTY**. No prompt, no eza aliases, no p10k. Attach when you want the shell:
 
 ```bash
-docker run --rm -it --name zsh-container zsh-image
+docker compose exec app zsh     # prompt + eza + bat + p10k
+docker compose exec app bash
 ```
 
-Interactive default is zsh (p10k). bash/sh are still there:
+`docker run --rm image bash` and `docker run --rm image tail -f /dev/null` work because there is no ENTRYPOINT swallowing the command.
+
+---
+
+## 🔐 sudo
+
+Default is **NOPASSWD** (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`). Global files
+(`/usr/share/globally/.zshrc`) are `644` root:root. uid `1000` cannot
+overwrite them directly — that is intentional. Use `sudo` or
+`add_text_to_zshrc` (it escalates with NOPASSWD).
+
+The password is **not baked** into the image. You turn it on at runtime.
 
 ```bash
-docker run --rm -it zsh-image bash
-# inside zsh:
-bash
-sh
-exit
-```
-
-## Create debug-container for user 1000:1000
-
-```bash
-docker run --rm -it --name zsh-container --user 1000:1000 zsh-image
-```
-
-## Upload docker image to dockerhub
-
-GitHub Actions builds and pushes on git tags `v*`.
-
-## To use in other docker images
-
-Pin a version tag (not `latest`) so rebuilds stay reproducible.
-
-```Dockerfile
-FROM cartagodocker/zsh:v1.0.5
-```
-
-Child Dockerfiles should keep `SHELL ["/bin/sh", "-c"]` for `RUN` (this image already sets it). The user still gets zsh via `CMD`.
-
-### sudo
-
-Passwordless by default (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) so Compose `user: 1000:1000` (no supplementary groups) still works. Global configs stay `644`/`755`; uid 1000 edits them with `sudo` (or `add_text_to_zshrc`, which escalates). Optional password is runtime-only:
-
-```bash
-docker run --rm -it -e SUDO_PASSWORD=secret zsh-image
+docker run --rm -it --user 1000:1000 cartagodocker/zsh:v2.0.0
 # inside:
-sudo-password              # prompt
-sudo-nopasswd              # back to NOPASSWD
+sudo -n id                 # default: no password
+
+sudo-password              # TTY prompt (hidden); afterwards sudo asks
+sudo-password 'secret'     # from arg (visible in `ps`)
+SUDO_PASSWORD=secret sudo-password   # from env
+
+sudo-password 'new-secret' # change it (needs the *current* sudo password
+                           # once one is already required)
+sudo-nopasswd              # back to NOPASSWD (needs the current password)
 ```
+
+At start (first interactive/login shell applies it via
+`apply-sudo-password-on-boot.sh`):
+
+```bash
+docker run --rm -it -e SUDO_PASSWORD=secret cartagodocker/zsh:v2.0.0
+```
+
+How it works as uid 1000:
+
+| State | `sudo-password` / `sudo-nopasswd` |
+|---|---|
+| NOPASSWD (default) | Escalates with `sudo -n` (no prompt). |
+| Password already on | Escalates with `sudo` — type the **current** password, then the helper sets the new one (or drops it). |
+
+`sudo-password` writes `/etc/container-sudo-password`, switches sudoers
+from `NOPASSWD:ALL` to `ALL`, and `chpasswd`s every login user. Changing
+the password overwrites that file and re-runs `chpasswd`. `sudo -k`
+clears sudo’s ticket cache if an old password still seems to work.
+
+Compose `user: "1000:1000"` drops extra groups, so the sudoers rule is
+`ALL`, not `%sudo`.
 
 ---
 
-# Scripts
+## 🎨 Fonts and icons
 
-## `add_text_to_zshrc` - To add commands or text in the .zshrc file
+The **container only emits Unicode**. The **host terminal** draws glyphs.
 
-I added a script to the image that allows you to add commands or text to the .zshrc file context for all users.
-The are an zsh file "add_text_to_zshrc.sh" that you can use to add text to the .zshrc file in the container.
+| | What | Needs on the host |
+|---|---|---|
+| 🔷 | Powerlevel10k separators, git icons, eza file icons | A [Nerd Font](https://www.nerdfonts.com/font-downloads) (CaskaydiaCove / Cascadia Code NF) |
+| 🐳 | Prompt whale (`os_icon`) | An **emoji** font — Segoe UI Emoji (Windows), Apple Color Emoji (macOS), Noto Color Emoji (many Linux desktops). Some Linux terminals have none → tofu. Same Unicode everywhere; the font is local. |
 
-for example:
+VS Code:
 
-### Example usage:
-
-```bash
-add_text_to_zshrc "alias my_command='echo Hi, Cartago!'".
+```json
+"terminal.integrated.fontFamily": "'Cascadia Code NF', 'CaskaydiaCove Nerd Font', Consolas, monospace"
 ```
 
-### Example usage with --prepend flag:
+Without a Nerd Font you get boxes on powerline / `ls` icons. That is not an image bug. There is no in-image fallback that still looks like p10k.
 
-It can be used to add text to the beginning of the file.
+---
 
-```bash
-add_text_to_zshrc "alias my_command='echo Hi, Cartago!'" --prepend
-```
+## 🧩 Scripts for child images
 
-### Example usage with multiline text:
+All write `/usr/share/globally/...` (every user). They `sudo` if needed.
 
-It can be used to add multiline text.
+### `add_text_to_zshrc`
 
 ```bash
-add_text_to_zshrc "alias my_command='echo Hi, Cartago!'\nalias my_command2='echo Hi, Cartago!'" --prepend
-```
-
-### Other Example usage with multiline text:
-
-```bash
+add_text_to_zshrc "alias hello='echo hi'"
+add_text_to_zshrc "alias hello='echo hi'" --prepend
 add_text_to_zshrc "$(printf '%s\n' \
-    'alias my_command="echo Hi, Cartago!"' \
-    'alias my_command2="echo Goodbye, Cartago!"' \
-    'echo "This is a test"' \
-    'ls -ln')"
+    'alias hello="echo hi"' \
+    'alias bye="echo bye"')"
 ```
 
-### Example to use multiline in other DockerFile
-
-```Dockerfile
-FROM cartagodocker/zsh:v1.0.5
-
+```dockerfile
+FROM cartagodocker/zsh:v2.0.0
 RUN add_text_to_zshrc "$(printf '%s\n' \
-    'alias my_command="echo Hi, Cartago!"' \
-    'alias my_command2="echo Goodbye, Cartago!"' \
-    'echo "This is a test"' \
-    'ls -ln')" --prepend
+    'alias hello="echo hi"')"
 ```
 
-## `add_text_to_p10k` - To add commands or text in the `.p10k.zsh` file
+### `add_text_to_p10k`
 
-It works like the `add_text_to_zshrc` script but it adds the text to the `.p10k.zsh` file.
-
-### Example usage:
+Same CLI, writes `.p10k.zsh`.
 
 ```bash
 add_text_to_p10k "typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose"
 ```
 
-## `share_config_globally` - To share configuration between users in Dockerfile installations
+### `share_config_globally`
 
-You can use the script `share_config_globally` to share configuration between users in the container after install new dependencies or tools in inherit images.
+Move something from a user home (default `/root`) to `/usr/share/<name>` and symlink it for `/root`, `/home/*`, `/etc/skel`.
 
-### Example usage:
-
-To share global installations with fnm.
-
-When you install fnm it will create a folder with files in `/root/.local/share/fnm` for the root user.
-
-But it will not be available for other users in the container. It could be a problem if you want to use fnm in other users and you need to install the node version for each user.
-
-I added a script in the image that allows you to share them easily.
-
-If you wish to share the configuration with other users, you can use the script `share_config_globally` to symlink the configuration to the `/etc/skel` folder for new users, and to the existing users in the image.
-
-Format:
-
-```vbnet
-    Usage: share_config_globally <src> [--to <destination_name --default= source folder name] [--base-src <source_base_path --default='/root'] [--permissions <permissions --default='755']]
-
-    Parameters:
-        src             Path to the source file or folder (required) (Dont need to be the full path, just the path from the base folder, for example: /.local/share/fnm)
-      --to            Name of the destination folder (optional - default: source folder name)
-      --base-src      Path to the source file or folder (optional - default: /root)
-      --permissions   Permissions for the destination (optional, default: 755)
-
-    Example:
-        share_config_globally .local/share --to fnm --base-src /root --permissions 755
-
+```bash
+share_config_globally .local/share/fnm
+share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --permissions 755
 ```
 
-#### Example usage:
-
-```
-share_config_globally .local/share --to fnm --base-src /root --permissions 755
-```
-
-In this case `fnm` and `/root` will be the default values, so you can use the command without the last two parameters.
-
-#### Example usage in Dockerfile with fnm:
-
-```Dockerfile
-FROM cartagodocker/zsh:v1.0.5
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl unzip ca-certificates \
-    && curl -fsSL ${FNM_URL} -o /tmp/fnm.zip \
-    && mkdir -p ${FNM_BIN} \
-    && unzip /tmp/fnm.zip -d ${FNM_BIN} \
-    && chmod +x ${FNM_BIN}/fnm \
-    && fnm completions --shell zsh > ${FNM_BIN}/_fnm \
-    && fnm install ${NODE_DEFAULT_VERSION} \
-    && fnm default ${NODE_DEFAULT_VERSION} \
-    # It will create the folder /root/.local/share/fnm
-    # Then you can share the configuration with the next command
-    && share_config_globally .local/share/fnm
-```
-
-
-#### Other Example usage in Dockerfile with bun.js:
-
-```Dockerfile
-FROM cartagodocker/zsh:v1.0.5
-
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && curl -fsSL ${BUN_URL} | bash \
-    # It will create the folder /root/.bun
-    # Then you can share the configuration with the next command
-    && share_config_globally .bun --to bun --base-src /root --permissions 777
-```
-
+`--permissions` default is `755`. Use `777` only when every uid must write the shared tree (package caches, etc.).
 
 ---
 
-# Fonts, ligatures and icons - theme
+## 🔑 SSH (client only — no sshd)
 
-### The zsh theme use [``nerdfonts``](https://www.nerdfonts.com/font-downloads).
-
-The image has been created with a config for `CaskaydiaCove Nerd Font` to look the theme correctly.
-
-Icons (eza file glyphs, p10k powerline, the 🐳 os_icon) are **drawn by the host terminal**, not by the container. Linux/macOS/Windows all need a Nerd Font selected in that terminal (VS Code: `terminal.integrated.fontFamily`). Without it you get boxes/`?`, not a DockerZsh bug. Emoji (🐳) also needs a font with emoji (Windows Terminal / VS Code usually have one; some Linux VTE terminals do not). The image sets `LANG=C.UTF-8` so the bytes are valid UTF-8.
-
-[Download CaskaydiaCove Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip)
-
-You can try other nerdfont for your host terminal, but is possible it doesn't look correctly.
-
-[Link with all nerdfonts](https://www.nerdfonts.com/font-downloads)
-
-Install the font in your system and configure your terminal to use it.
-
-### To configure the font in the terminal
-
-Once you have installed the font in your system, you need to configure your terminal to use it.
-
-For example, to add in VsCode terminal.  add the next line in the `settings.json` vscode file:
-
-```json
-	"terminal.integrated.fontFamily": "'CaskaydiaCove Nerd Font'",
-```
-
-Or go to the VsCode settings and search for `terminal.integrated.fontFamily` and add the font name of your choice.
-
-
-Read documentation if you are using another terminal like `gnome-terminal`, `konsole`, `alacritty`, `powershell`, etc.
-
-Look your terminal configuration to add the font, like the before example.
-
----
-
-# SSH
-
-## To use ssh in the container. (Neccesary for git with ssh config)
-
-If you have your ssh key in the default path `~/.ssh` you can use it. Otherwise you must to add the path to the ssh key in the container.
-
-Open container with the next command:
-
-```bash
-docker run --rm -it --name ionic-cover-container -v ~/.ssh:~/.ssh:ro ionic-cover-image
-```
-
-In other path;
-
-```bash
-docker run --rm -it --name ionic-cover-container -v ~/your_path/.ssh:~/.ssh:ro ionic-cover-image
-```
-
-Or with docker compose:
+`openssh-client` is installed. Bind-mount host `~/.ssh` and type `ssh` / `git`. Root or any uid — one volume is enough.
 
 ```yaml
 services:
-    name_service:
-        image: cartagodocker/ionic-cover
-        volumes:
-            - ~/.ssh:/~/.ssh:ro
+  dev:
+    image: cartagodocker/zsh:v2.0.0
+    volumes:
+      - ~/.ssh:/${USER}/.ssh:ro
+      - ~/.gitconfig:/${USER}/.gitconfig:ro
 ```
+
+```bash
+docker run --rm -it \
+  -v "$HOME/.ssh:/$USER/.ssh:ro" \
+  -v "$HOME/.gitconfig:/$USER/.gitconfig:ro" \
+  cartagodocker/zsh:v2.0.0
+# inside: ssh git@github.com
+#         git commit   # author = host user.name, not ubuntu@id
+```
+
+`${USER}` is the **host** name. Docker needs an **absolute** target (`/${USER}/.ssh` → `/cartago/.ssh`), not `${USER}/.ssh`. That path is not `$HOME` in the container. The client finds any bind ending in `.ssh`, copies keys to a `700` dir this uid owns (OpenSSH rejects `644`/`777` and cannot write `known_hosts` on `:ro`), and `ssh`/`git` just work as root or as any other user.
+
+**Git author is not the SSH key.** `git pull` / `git push` use the key. `git commit` needs `user.name` + `user.email`. Bind host `~/.gitconfig` the same way (or set `GIT_AUTHOR_NAME` + `GIT_AUTHOR_EMAIL`). The container path can be any absolute folder (`/${USER}/.gitconfig`, `/mnt/host-gitconfig`, …) as long as it ends in `.gitconfig`. Without that, `git commit` says identity is required (with an example) and exits `1` instead of inventing `ubuntu@<container>`.
+
+Missing SSH keys: `ssh`/`scp`/`sftp` print that **keys are required**, with the usual bind example and a note that another directory is fine, then OpenSSH still runs.
+
+**`known_hosts` — bringing the host file is optional, not required:**
+
+The bind is the whole `~/.ssh` directory, so if the host has `known_hosts` it comes in with the keys. That is expected.
+
+| Layer | Where | What |
+|---|---|---|
+| Official (baked) | `/usr/share/ssh/known_hosts` and `/etc/ssh/ssh_known_hosts` | GitHub / GitLab host keys. `GlobalKnownHostsFile`. Same content twice so `/usr/bin/ssh` still trusts them if someone bypasses the wrapper. |
+| Your host file (if present) | copied / merged into `/tmp/container-ssh-<uid>/known_hosts` | Used as-is. New hosts (`accept-new`) are appended **there**, never on the `:ro` volume. Re-runs merge new host lines and keep container-learned hosts. |
+
+Without a host `known_hosts`, GitHub / GitLab still work from the baked file. Other hosts are learned on first connect and stay in `/tmp` for this container lifetime.
+
+**Agent** (key never enters the container) still works if you already use one:
+
+```bash
+docker run --rm -it \
+  -v "$SSH_AUTH_SOCK":/ssh-agent \
+  -e SSH_AUTH_SOCK=/ssh-agent \
+  cartagodocker/zsh:v2.0.0
+```
+
+This is not SSH-into-the-container. Attach from the host: `docker exec -it … zsh`.
+
+---
+
+## 📖 Catalogue CLI (`dockerzsh`)
+
+Inside a running container this image ships **`dockerzsh`**: a catalogue of every tool and helper, not the host `docker` CLI.
+
+```bash
+docker run --rm cartagodocker/zsh:v2.0.0 dockerzsh --help
+docker compose exec app dockerzsh --help
+```
+
+The full dump is long on purpose (what each tool does, typical invocation, image caveats). Filter by **section**:
+
+```bash
+dockerzsh --sections | -s       # list ids
+dockerzsh --shells              # one section
+dockerzsh shells                # same (flag or bare id)
+dockerzsh --section shells      # same
+dockerzsh shells network        # several sections
+dockerzsh --version | -v        # image identity (ZSH_IMAGE_VERSION)
+dockerzsh --list | -l           # tool names from the catalogue
+dockerzsh --list --version | -l -v
+                                # probe every catalogue tool now
+dockerzsh shells --version | shells -v
+dockerzsh eza --version | eza -v
+```
+
+| Id | Section |
+|---|---|
+| `about` | What this image is (CMD, no ENTRYPOINT, TTY vs keep-alive) |
+| `usage` | How to invoke `dockerzsh` |
+| `shells` | `zsh` / `bash` / `sh` |
+| `listing` | `eza`, `bat`, `fd`, `rg`, `nnn`, `ncdu`, `duf`, … |
+| `edit` | `nano`, `vi`, `jq`, `jo`, `sqlite3`, … |
+| `archives` | zip/tar/`extract`, `dos2unix`, … |
+| `network` | `curl`, `ssh`/`scp`/`sftp`, `ip`/`ss`, `socat`, … |
+| `system` | `git`, `htop`, `tmux`, `sudo`, … |
+| `extras` | `fzf`, `zoxide`, `colordiff`, `patch` |
+| `helpers` | `add_text_to_zshrc`, `share_config_globally`, `sudo-password`, … |
+| `fonts` | Host fonts + what is **not** in this image |
+
+Unknown ids exit `2` and point at `--sections`. `--shells` and `shells` are the same id (`listing` also accepts `--ls`).
+
+---
+
+## 🚀 Build and publish
+
+```bash
+docker build --build-arg VERSION=2.0.0 -t zsh-local:dev -f ./Dockerfile ./
+```
+
+GitHub Actions (secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_PASSWORD`; variable `DOCKERHUB_REPO`):
+
+| Trigger | What happens |
+|---|---|
+| Git tag `v*` | Build + push `cartagodocker/zsh:<tag>` only. No `latest`. — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
+| Push to `main` that changes `README.md` | Docker Hub long description — [update-dockerhub-description.yml](./.github/workflows/update-dockerhub-description.yml) |
+
+See [CHANGELOG.md](./CHANGELOG.md).

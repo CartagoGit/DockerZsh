@@ -33,25 +33,78 @@ usage() {
     exit 1
 }
 
+# Fail if a flag that takes a value is missing it or the next token
+# looks like another flag (`--to --permissions 755` must not eat src).
+require_optarg() {
+    local flag="$1"
+    local val="${2:-}"
+    if [[ -z "$val" || "$val" == -* ]]; then
+        echo "Error: ${flag} requires a value (got '${val}')." >&2
+        usage
+    fi
+}
+
 parse_options() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --to)
+                require_optarg "$1" "${2:-}"
                 DEST_DIR_NAME="$2"
                 shift 2
                 ;;
+            --to=*)
+                DEST_DIR_NAME="${1#--to=}"
+                require_optarg --to "$DEST_DIR_NAME"
+                shift
+                ;;
             --base-src)
+                require_optarg "$1" "${2:-}"
                 ROOT="$2"
                 shift 2
                 ;;
+            --base-src=*)
+                ROOT="${1#--base-src=}"
+                require_optarg --base-src "$ROOT"
+                shift
+                ;;
             --permissions)
+                require_optarg "$1" "${2:-}"
                 PERMISSIONS="$2"
                 shift 2
+                ;;
+            --permissions=*)
+                PERMISSIONS="${1#--permissions=}"
+                require_optarg --permissions "$PERMISSIONS"
+                shift
                 ;;
             -h|--help)
                 usage
                 ;;
+            --)
+                shift
+                if [[ $# -gt 0 ]]; then
+                    if [[ -n "$SRC" ]]; then
+                        echo "Error: unexpected extra argument: $1" >&2
+                        usage
+                    fi
+                    SRC="$1"
+                    shift
+                fi
+                if [[ $# -gt 0 ]]; then
+                    echo "Error: unexpected extra argument: $1" >&2
+                    usage
+                fi
+                break
+                ;;
+            -*)
+                echo "Error: unknown option: $1" >&2
+                usage
+                ;;
             *)
+                if [[ -n "$SRC" ]]; then
+                    echo "Error: unexpected extra argument: $1" >&2
+                    usage
+                fi
                 SRC="$1"
                 shift
                 ;;

@@ -1,6 +1,8 @@
 # Base Ubuntu LTS. Pinneada al tag 24.04 (no latest).
+# Tag de esta imagen: v2.0.0.
 FROM ubuntu:24.04
 
+ARG VERSION=2.0.0
 ARG ROOT_HOME=/root
 ARG SCRIPTS_HOME=/usr/local/bin
 
@@ -19,9 +21,13 @@ ARG ZSH_SYNTAX_HIGHLIGHTING_SHA=5eb677bb0fa9a3e60f0eff031dc13926e093df92
 ARG ZSH_BAT_URL=https://github.com/fdellwing/zsh-bat.git
 ARG ZSH_BAT_SHA=467337613c1c220c0d01d69b19d2892935f43e9f
 
-# Copy zsh and p10k config to /root; share_config_globally las publica
-# en /usr/share/globally y las enlaza a root, /home/* y /etc/skel.
-COPY config/ ${ROOT_HOME}/
+# zsh/p10k to /root (share_config_globally las publica).
+# SSH: known_hosts oficiales + ssh_config.d. Las claves del host se
+# montan en ~/.ssh:ro; ssh-wrap las copia a un dir 700 (OpenSSH rechaza
+# 644/777 y no puede escribir known_hosts en un volumen :ro).
+COPY config/.zshrc config/.p10k.zsh ${ROOT_HOME}/
+COPY config/ssh/known_hosts /tmp/zsh-ssh-known_hosts
+COPY config/ssh/50-container.conf /tmp/zsh-ssh-50-container.conf
 COPY scripts/ ${SCRIPTS_HOME}/
 
 # Comentarios FUERA del bloque RUN (un # a mitad de \ trunca el
@@ -35,8 +41,26 @@ COPY scripts/ ${SCRIPTS_HOME}/
 #   7. sudo NOPASSWD (ALL, no %sudo): uid 1000 escribe globales con sudo,
 #      no con 777 en .zshrc. Optional password via SUDO_PASSWORD / sudo-password.
 #   8. LANG=C.UTF-8: eza/p10k/emoji necesitan UTF-8 (POSIX trunca iconos).
-RUN apt-get update && apt-get install -y --no-install-recommends \
+#   9. CLI extras: daily-driver kit. No gcc, no python, no locales,
+#      no man-db, no git-lfs/rclone/neovim, no 7zip/file/xmllint/
+#      git-extras/gpg/expect/dig/iperf3/rlwrap (child images).
+#  10. No Docker inside the image (no docker-ce-cli, no dockerd).
+#      Use docker on the host. A child image can apt-install a client
+#      if it really needs one.
+RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
+      > /etc/dpkg/dpkg.cfg.d/keep-fzf-examples \
+    && apt-get update && apt-get install -y --no-install-recommends \
         curl wget git openssh-client zsh bat eza ca-certificates sudo \
+        less nano vim-tiny tree patch fd-find ripgrep fzf zoxide \
+        unzip zip xz-utils bzip2 zstd lz4 pigz cpio cabextract \
+        jq jo sqlite3 \
+        iputils-ping iputils-tracepath fping rsync \
+        netcat-openbsd socat traceroute mtr-tiny whois iproute2 openssl \
+        tcpdump apache2-utils \
+        psmisc lsof htop ncdu duf tzdata bsdextrautils moreutils pv bc \
+        uuid-runtime acl libcap2-bin inotify-tools entr \
+        gettext-base make strace xxd uchardet dos2unix colordiff \
+        progress keychain tig tmux nnn \
     && for script in ${SCRIPTS_HOME}/*.zsh; do \
          if [ -f "$script" ]; then \
            mv "$script" "${script%.zsh}"; \
@@ -50,10 +74,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
                   ${SCRIPTS_HOME}/sudo-nopasswd \
                   ${SCRIPTS_HOME}/apply-sudo-password-on-boot.sh \
                   ${SCRIPTS_HOME}/zsh-profile.sh \
+                  ${SCRIPTS_HOME}/dockerzsh \
+                  ${SCRIPTS_HOME}/ssh-from-host \
+                  ${SCRIPTS_HOME}/ssh-wrap \
+                  ${SCRIPTS_HOME}/git-from-host \
+                  ${SCRIPTS_HOME}/git-wrap \
+    && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/ssh \
+    && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/scp \
+    && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/sftp \
+    && ln -sfn ${SCRIPTS_HOME}/git-wrap ${SCRIPTS_HOME}/git \
+    && install -d -m 0755 /usr/share/ssh /etc/ssh/ssh_config.d \
+    && install -m 0644 /tmp/zsh-ssh-known_hosts /usr/share/ssh/known_hosts \
+    && install -m 0644 /tmp/zsh-ssh-known_hosts /etc/ssh/ssh_known_hosts \
+    && install -m 0644 /tmp/zsh-ssh-50-container.conf /etc/ssh/ssh_config.d/50-container.conf \
+    && rm -f /tmp/zsh-ssh-known_hosts /tmp/zsh-ssh-50-container.conf \
+    && git config --system init.defaultBranch main \
     && clone_pinned() { \
          _url="$1"; _dest="$2"; _sha="$3"; \
          mkdir -p "$_dest"; \
-         git init "$_dest"; \
+         git -c init.defaultBranch=main init "$_dest"; \
          git -C "$_dest" remote add origin "$_url"; \
          git -C "$_dest" fetch --depth=1 origin "$_sha"; \
          git -C "$_dest" checkout --detach FETCH_HEAD; \
@@ -67,7 +106,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --base-src /root --permissions 755 \
     && share_config_globally .p10k.zsh --to globally/.p10k.zsh --permissions 644 \
     && share_config_globally .zshrc --to globally/.zshrc --permissions 644 \
+    && install -d -m 0755 /usr/share/gitstatus \
+    && GITSTATUS_CACHE_DIR=/usr/share/gitstatus \
+         /usr/share/globally/.oh-my-zsh/themes/powerlevel10k/gitstatus/install -f \
+    && chmod a+rX /usr/share/gitstatus \
+    && find /usr/share/gitstatus -type f -exec chmod a+r {} + \
+    && find /usr/share/gitstatus -type f -name 'gitstatusd*' -exec chmod a+rx {} + \
     && ln -sfn /usr/bin/batcat /usr/local/bin/bat \
+    && ln -sfn /usr/bin/fdfind /usr/local/bin/fd \
     && chsh -s /usr/bin/zsh root \
     && if getent passwd ubuntu >/dev/null 2>&1; then chsh -s /usr/bin/zsh ubuntu; fi \
     && ${SCRIPTS_HOME}/enable-sudo-users.sh \
@@ -80,8 +126,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # y $(...). zsh -c se parte o se traga errores. El usuario interactivo
 # entra por CMD zsh, no por SHELL ni ENTRYPOINT.
 # Sin ENTRYPOINT: `docker run imagen bash` lanza bash, no "can't open input file".
-ENV SHELL=/usr/bin/zsh \
+# VERSION = this image. Child images (nodebun) often set their own
+# VERSION; ZSH_IMAGE_VERSION stays the zsh tag so dockerzsh --version
+# does not lie after FROM.
+ENV VERSION=${VERSION} \
+    ZSH_IMAGE_VERSION=${VERSION} \
+    SHELL=/usr/bin/zsh \
     LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8
+    LC_ALL=C.UTF-8 \
+    TERM=xterm-256color \
+    GIT_SSH_COMMAND=/usr/local/bin/ssh \
+    GITSTATUS_CACHE_DIR=/usr/share/gitstatus
 SHELL ["/bin/sh", "-c"]
 CMD ["/usr/bin/zsh"]

@@ -18,7 +18,7 @@ chmod 0440 /etc/sudoers.d/container-nopasswd
 visudo -cf /etc/sudoers.d/container-nopasswd
 
 if [ -f /etc/adduser.conf ]; then
-  sed -i 's/^#*EXTRA_GROUPS=.*/EXTRA_GROUPS="sudo"/; s/^#*ADD_EXTRA_GROUPS=.*/ADD_EXTRA_GROUPS=1/' /etc/adduser.conf
+  sed -i 's/^#*EXTRA_GROUPS=.*/EXTRA_GROUPS="sudo"/; s/^#*ADD_EXTRA_GROUPS=.*/ADD_EXTRA_GROUPS=1/; s|^#*DSHELL=.*|DSHELL=/usr/bin/zsh|' /etc/adduser.conf
 fi
 
 if [ -x /usr/sbin/useradd ] && [ ! -e /usr/sbin/useradd.real ]; then
@@ -27,15 +27,95 @@ fi
 
 cat > /usr/local/sbin/useradd <<'WRAP'
 #!/bin/sh
+# After a successful useradd, put LOGIN in group sudo (and apply the
+# optional container password). LOGIN is the leftover positional after
+# options that take a value — not "the last token that is not a flag".
+# `useradd -m alice -c "Full Name"` → alice, not "Full Name".
 real=/usr/sbin/useradd.real
-"$real" "$@"
+# Default login shell is zsh unless the caller passed -s/--shell.
+# Do not inject -s on -D/--defaults: `useradd -D` lists defaults;
+# `useradd -D -s …` would *set* the default shell.
+shell_given=0
+defaults_mode=0
+prev=
+for a in "$@"; do
+  if [ "$prev" = 1 ]; then
+    prev=
+    continue
+  fi
+  case "$a" in
+    --shell=*) shell_given=1 ;;
+    --defaults) defaults_mode=1 ;;
+    -s|--shell)
+      shell_given=1
+      prev=1
+      ;;
+    -D|--defaults)
+      defaults_mode=1
+      ;;
+    -*)
+      case "$a" in
+        --*) ;;
+        *s*) shell_given=1; prev=1 ;;
+      esac
+      case "$a" in
+        --*) ;;
+        *D*) defaults_mode=1 ;;
+      esac
+      ;;
+  esac
+done
+if [ "$shell_given" = 0 ] && [ "$defaults_mode" = 0 ]; then
+  "$real" -s /usr/bin/zsh "$@"
+else
+  "$real" "$@"
+fi
 st=$?
 [ "$st" -eq 0 ] || exit "$st"
 user=
-for a in "$@"; do
-  case "$a" in
-    -*) ;;
-    *) user=$a ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --)
+      shift
+      [ $# -gt 0 ] && user=$1
+      break
+      ;;
+    --comment=*|--home-dir=*|--home=*|--base-dir=*|--expiredate=*|--inactive=*|--gid=*|--groups=*|--skel=*|--key=*|--password=*|--shell=*|--uid=*|--selinux-user=*|--root=*|--prefix=*|--selinux-range=*)
+      shift
+      ;;
+    -c|--comment|-d|--home-dir|--home|-b|--base-dir|-e|--expiredate|-f|--inactive|-g|--gid|-G|--groups|-k|--skel|-K|--key|-p|--password|-s|--shell|-u|--uid|-Z|--selinux-user|-R|--root|-P|--prefix|--selinux-range)
+      shift
+      [ $# -gt 0 ] || break
+      shift
+      ;;
+    --*)
+      shift
+      ;;
+    -*)
+      opt=${1#-}
+      shift
+      while [ -n "$opt" ]; do
+        ch=${opt%"${opt#?}"}
+        rest=${opt#?}
+        case "$ch" in
+          c|d|b|e|f|g|G|k|K|p|s|u|Z|R|P)
+            if [ -n "$rest" ]; then
+              opt=
+            else
+              [ $# -gt 0 ] && shift
+              opt=
+            fi
+            ;;
+          *)
+            opt=$rest
+            ;;
+        esac
+      done
+      ;;
+    *)
+      user=$1
+      shift
+      ;;
   esac
 done
 if [ -n "$user" ] && id "$user" >/dev/null 2>&1; then
