@@ -42,6 +42,6 @@ Open (do not invent extra scope):
 | 33 | `useradd` wrapper last non-flag arg. |
 | 34 | `fzf` binary present; key-bindings not sourced in `.zshrc`. |
 
-Dirty tree on `fixes-pre-1.0.6` may include SSH wrappers, `config/ssh/`, catalogue text — continue that work; do not revert `FROM`/VERSION to 1.0.5. Docker CLI was dropped (~91 MiB).
+Dirty tree on `fixes-pre-1.0.6` may include SSH wrappers, `config/ssh/`, catalogue text — continue that work; do not revert `FROM`/VERSION to 1.0.5. No Docker CLI in this image (install in a child if needed).
 
 **Publish order:** Hub zsh `v1.0.6` first, then NodeBun (already pins `zsh:v1.0.6`).

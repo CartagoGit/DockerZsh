@@ -87,7 +87,7 @@ El bug `ENTRYPOINT ["zsh"]` (`docker run img echo hello` → `can't open input f
 | 27 | CLI extras + `dockerzsh` | baja | [x] |
 | 28 | `.gitignore` (estaba vacío) | baja | [x] |
 | 35 | `known_hosts` baked + copia/merge del host en `/tmp` | media | [x] |
-| 36 | Quitar Docker CLI (~91 MiB: docker-ce-cli + compose) | media | [x] |
+| 36 | Sin Docker dentro (ni CLI ni dockerd; hija si hace falta) | media | [x] |
 
 ### Abiertos (código / docs / CI)
 

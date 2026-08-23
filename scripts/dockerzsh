@@ -45,7 +45,9 @@ Two different jobs — mixing them looks like "eza is broken":
 Build SHELL is ["/bin/sh", "-c"] so child Dockerfiles do not inherit
 zsh -c for RUN. Locale is LANG=C.UTF-8 / LC_ALL=C.UTF-8.
 HTTPS works: ca-certificates is installed.
-No Docker CLI and no sshd. Attach with docker exec from the host.
+No sshd. No Docker inside (no dockerd, no docker CLI). Attach with
+docker exec from the host. Install a Docker client in a child image
+if you need one.
 
 ##id:usage
 ========================================================================
@@ -311,6 +313,24 @@ System / git / process
       (ca-certificates). SSH remotes: mount ~/.ssh and type git
       (GIT_SSH_COMMAND uses the same ssh wrapper).
 
+      Commits need user.name + user.email. The SSH key does not
+      provide them. The image does not bake a name. Same contract
+      as ssh: bind the host file once (or set GIT_AUTHOR_NAME +
+      GIT_AUTHOR_EMAIL). git-from-host writes a tiny global config
+      under /tmp/container-git-<uid>/; git-wrap loads it.
+
+        volumes:
+          - ~/.ssh:/${USER}/.ssh:ro
+          - ~/.gitconfig:/${USER}/.gitconfig:ro
+
+      git config user.name     # should match the host
+      git commit               # author is that name, not ubuntu@id
+
+  git-from-host
+      Copy host identity now (also runs from zshrc / profile.d / git).
+      GIT_FROM_HOST_VERBOSE=1 to see the path. You do not need to
+      call this yourself.
+
   git-extras
       Extra git subcommands: git-summary, git-ignore, git-info, …
 
@@ -473,8 +493,8 @@ Without a Nerd Font you get boxes on the prompt / ls icons. That is
 not an image bug.
 
 Not in this image (use a child image): gcc/g++/python3, neovim, git-lfs,
-rclone, locales, man-db, nmap. No sshd. No Docker CLI (docker-ce-cli
-is ~91 MiB installed; use docker on the host). tcpdump/iperf3
+rclone, locales, man-db, nmap. No sshd. No Docker (dockerd / docker
+CLI) — install that in a child if you need it. tcpdump/iperf3
 often need extra Linux capabilities (NET_RAW / NET_ADMIN / host network).
 EOF
 }

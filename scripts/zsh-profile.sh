@@ -25,3 +25,13 @@ if [ -r "$_ssh_env" ]; then
   . "$_ssh_env"
 fi
 unset _ssh_env
+
+if [ -x /usr/local/bin/git-from-host ]; then
+  /usr/local/bin/git-from-host || true
+fi
+_git_env="/tmp/container-git-$(id -u)/env"
+if [ -r "$_git_env" ]; then
+  # shellcheck disable=SC1090
+  . "$_git_env"
+fi
+unset _git_env

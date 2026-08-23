@@ -64,5 +64,6 @@ Orden: publicar zsh 1.0.6, **después** NodeBun.
 ### Removed
 - `fasd` plugin (binary was never installed).
 - Oh My Zsh `install.sh` from `master` (replaced by pinned clone).
-- Docker CLI (`docker-ce-cli` + compose plugin + `docker-wrap`).
-  ~91 MiB installed; use `docker` on the host.
+- Docker inside the image (`docker-ce-cli` + compose plugin +
+  `docker-wrap`). Use `docker` on the host. A child image can
+  install a client if it needs one.

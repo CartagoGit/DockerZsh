@@ -61,5 +61,10 @@ fi
 if [[ -r /tmp/container-ssh-${UID}/env ]]; then
   source /tmp/container-ssh-${UID}/env
 fi
+# Host git identity (user.name / user.email). SSH keys do not set this.
+[ -x /usr/local/bin/git-from-host ] && /usr/local/bin/git-from-host || true
+if [[ -r /tmp/container-git-${UID}/env ]]; then
+  source /tmp/container-git-${UID}/env
+fi
 
 # END OF STANDARD DOCKER IMAGE CONFIG

@@ -44,8 +44,9 @@ COPY scripts/ ${SCRIPTS_HOME}/
 #   9. CLI extras: daily-driver kit for any uid / any host. No gcc, no
 #      python, no locales, no man-db, no git-lfs/rclone/neovim (those
 #      belong in child images). Extra layer vs previous extras ~34 MB.
-#  10. No Docker CLI. docker-ce-cli + compose plugin is ~91 MiB
-#      installed — too much for this shell base. Use docker on the host.
+#  10. No Docker inside the image (no docker-ce-cli, no dockerd).
+#      Use docker on the host. A child image can apt-install a client
+#      if it really needs one.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl wget git openssh-client zsh bat eza ca-certificates sudo \
         less file nano vim-tiny tree patch fd-find ripgrep fzf zoxide \
@@ -74,9 +75,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
                   ${SCRIPTS_HOME}/dockerzsh \
                   ${SCRIPTS_HOME}/ssh-from-host \
                   ${SCRIPTS_HOME}/ssh-wrap \
+                  ${SCRIPTS_HOME}/git-from-host \
+                  ${SCRIPTS_HOME}/git-wrap \
     && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/ssh \
     && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/scp \
     && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/sftp \
+    && ln -sfn ${SCRIPTS_HOME}/git-wrap ${SCRIPTS_HOME}/git \
     && install -d -m 0755 /usr/share/ssh /etc/ssh/ssh_config.d \
     && install -m 0644 /tmp/zsh-ssh-known_hosts /usr/share/ssh/known_hosts \
     && install -m 0644 /tmp/zsh-ssh-known_hosts /etc/ssh/ssh_known_hosts \

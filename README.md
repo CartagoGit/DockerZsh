@@ -37,7 +37,7 @@ FROM cartagodocker/zsh:v1.0.6
 
 There is **no** `openssh-server`. There is **no** `ENTRYPOINT`: the process you pass to `docker run` / Compose `command:` is what runs.
 
-**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, **no sshd**, **no Docker CLI** (`docker-ce-cli` + compose is ~91 MiB installed). Put compilers in a child image. Use `docker` on the host.
+**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, **no sshd**, **no Docker** (`dockerd` / `docker` CLI). Put compilers — or a Docker client — in a child image. Drive this container with `docker` on the **host**.
 
 ---
 
