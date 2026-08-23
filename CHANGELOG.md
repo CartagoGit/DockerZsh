@@ -19,14 +19,15 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
 - Docker Hub description workflow (same as NodeBun: Hub login JWT,
   `jq --rawfile`, push to `main` when `README.md` changes).
 - CLI extras (daily-driver, no gcc/python/locales/man-db).
-  Fat deps (`libicu`/`perl`/`python`/`gnupg`/`7zip`/`file`) stay
-  out. Docker CLI was **not** added. README “Image size”.
+  No ICU/Python/`gnupg`/`7zip`/`file`. Ubuntu `git` still needs
+  Perl. Docker CLI was **not** added. README “Image size”
+  (~249 MB uncompressed locally).
 - Daily-driver packages:
   `less`, `nano`, `vim-tiny` (`vi`), `fd`/`rg`/`fzf`/`zoxide`,
   archives (`unzip`/`zip`/`xz`/`bzip2`/`zstd`/`lz4`/`pigz`/`cpio`/`cabextract`),
   data (`jq`/`jo`/`sqlite3`/`bc`/`hexdump`/`xxd`),
-  net (`ping`/`tracepath`/`fping`/`dig`/`whois`/`mtr`/`nc`/`socat`/`ip`/`ss`/`openssl`/`tcpdump`/`iperf3`/`rsync`),
-  sys (`htop`/`lsof`/`ncdu`/`duf`/`tmux`/`nnn`/`make`/`envsubst`/`pv`/`sponge`/`uuidgen`/`inotifywait`/`entr`/`strace`/`tig`/`acl`/`setcap`/`keychain`/`rlwrap`/`dos2unix`/`uchardet`/`colordiff`/`progress`/`htpasswd`).
+  net (`ping`/`tracepath`/`fping`/`whois`/`mtr`/`nc`/`socat`/`ip`/`ss`/`openssl`/`tcpdump`/`rsync`),
+  sys (`htop`/`lsof`/`ncdu`/`duf`/`tmux`/`nnn`/`make`/`envsubst`/`pv`/`sponge`/`uuidgen`/`inotifywait`/`entr`/`strace`/`tig`/`acl`/`setcap`/`keychain`/`dos2unix`/`uchardet`/`colordiff`/`progress`/`htpasswd`).
 - Oh My Zsh plugins `extract` and `sudo`; fzf key-bindings (Ubuntu
   Docker images drop `/usr/share/doc`; this tree keeps
   `/usr/share/doc/fzf/examples`).
@@ -84,6 +85,19 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
   child overwrites `VERSION`.
 - `ssh-from-host` no longer wipes `known_hosts` on every run (would drop
   hosts learned via `accept-new`). Host file lines are merged in.
+- `git-from-host` / `ssh-from-host`: a miss on the first candidate
+  (`$HOME/.gitconfig` / `~/.ssh`) no longer aborts the scan under
+  `set -e`, so a bind at `/${USER}/.gitconfig` or `/${USER}/.ssh` is
+  found.
+- `useradd` without `-s` uses `/usr/bin/zsh` (skel already has the
+  shared `.zshrc`).
+- Ubuntu Docker images drop `/usr/share/doc`; fzf key-bindings are
+  kept via `path-include=/usr/share/doc/fzf/examples/*`.
+- `git init` of pinned clones sets `init.defaultBranch` so the build
+  log is not flooded with Git 2.28+ hints.
+- `sudo-password` can change the password after one is already
+  required: it escalates with `sudo` (current password), not only
+  `sudo -n`. Same pattern as `sudo-nopasswd`.
 
 ### Removed
 - `fasd` plugin (binary was never installed).
@@ -93,5 +107,9 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
   install a client if it needs one.
 - Hub tag `:latest` is no longer published. Pin `v2.0.0`.
 - Slim kit (install in a child if needed): `xmllint` (`libicu74`),
-  `git-extras` (full Perl), `file` (`libmagic-mgc`), `7zip`,
-  `gpg`/`gnupg`, `expect`/Tcl. `rsync` stays; Python/`rrsync` do not.
+  `git-extras`, `file` (`libmagic-mgc`), `7zip`, `gpg`/`gnupg`,
+  `expect`/Tcl, `dig`/`nslookup` (`bind9-dnsutils` / ICU), `iperf3`
+  (Ubuntu package wants a daemon; no systemd here), `rlwrap`
+  (pulls Python). `rsync` stays; Python/`rrsync` do not. `git` keeps
+  Perl (Ubuntu `git` depends on it). DNS: `/etc/resolv.conf` +
+  `getent hosts`.

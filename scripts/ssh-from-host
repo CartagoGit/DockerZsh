@@ -61,9 +61,10 @@ dir_has_files() {
 try() {
   [ -n "${_hit:-}" ] && return 0
   _d=$1
-  [ -n "$_d" ] || return 1
-  dir_has_files "$_d" || return 1
+  [ -n "$_d" ] || return 0
+  dir_has_files "$_d" || return 0
   _hit=$_d
+  return 0
 }
 
 pick_src() {

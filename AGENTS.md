@@ -29,15 +29,10 @@ This is **not** a repo bug. The tree is valid UTF-8. The Grok provider serialize
 
 ## Remaining work (zsh)
 
-Tracker: `FIXES.md`. Working tree is **v2.0.0**, not on Hub yet.
+Tracker: `FIXES.md` — **No planned fixes** in the tree.
 
-Open (do not invent extra scope):
-
-| # | What |
-|---|---|
-| 29 | Tag + publish `v2.0.0` to Hub (blocker for NodeBun). Wait until the tree is ready. |
-
-#30 (Actions SHA), #31 (no `:latest`), #32 (`share_config_globally` optargs), #33 (`useradd` LOGIN), #34 (fzf key-bindings) are done in this tree.
+Working tree is **v2.0.0**, not on Hub yet. Publish when you want:
+`git tag v2.0.0` + workflow (blocker for NodeBun).
 
 Do not revert `FROM`/VERSION to 1.0.5. Do not retag Hub `v1.0.5`. No Docker CLI in this image (install in a child if needed).
 

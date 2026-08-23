@@ -43,7 +43,7 @@ COPY scripts/ ${SCRIPTS_HOME}/
 #   8. LANG=C.UTF-8: eza/p10k/emoji necesitan UTF-8 (POSIX trunca iconos).
 #   9. CLI extras: daily-driver kit. No gcc, no python, no locales,
 #      no man-db, no git-lfs/rclone/neovim, no 7zip/file/xmllint/
-#      git-extras/gpg/expect (those belong in child images).
+#      git-extras/gpg/expect/dig/iperf3/rlwrap (child images).
 #  10. No Docker inside the image (no docker-ce-cli, no dockerd).
 #      Use docker on the host. A child image can apt-install a client
 #      if it really needs one.
@@ -54,13 +54,13 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
         less nano vim-tiny tree patch fd-find ripgrep fzf zoxide \
         unzip zip xz-utils bzip2 zstd lz4 pigz cpio cabextract \
         jq jo sqlite3 \
-        iputils-ping iputils-tracepath fping bind9-dnsutils rsync \
+        iputils-ping iputils-tracepath fping rsync \
         netcat-openbsd socat traceroute mtr-tiny whois iproute2 openssl \
-        tcpdump apache2-utils iperf3 \
+        tcpdump apache2-utils \
         psmisc lsof htop ncdu duf tzdata bsdextrautils moreutils pv bc \
         uuid-runtime acl libcap2-bin inotify-tools entr \
         gettext-base make strace xxd uchardet dos2unix colordiff \
-        progress keychain rlwrap tig tmux nnn \
+        progress keychain tig tmux nnn \
     && for script in ${SCRIPTS_HOME}/*.zsh; do \
          if [ -f "$script" ]; then \
            mv "$script" "${script%.zsh}"; \
@@ -88,10 +88,11 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
     && install -m 0644 /tmp/zsh-ssh-known_hosts /etc/ssh/ssh_known_hosts \
     && install -m 0644 /tmp/zsh-ssh-50-container.conf /etc/ssh/ssh_config.d/50-container.conf \
     && rm -f /tmp/zsh-ssh-known_hosts /tmp/zsh-ssh-50-container.conf \
+    && git config --system init.defaultBranch master \
     && clone_pinned() { \
          _url="$1"; _dest="$2"; _sha="$3"; \
          mkdir -p "$_dest"; \
-         git init "$_dest"; \
+         git -c init.defaultBranch=master init "$_dest"; \
          git -C "$_dest" remote add origin "$_url"; \
          git -C "$_dest" fetch --depth=1 origin "$_sha"; \
          git -C "$_dest" checkout --detach FETCH_HEAD; \

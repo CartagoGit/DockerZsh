@@ -32,16 +32,18 @@ FROM cartagodocker/zsh:v2.0.0
 | 📂 | Listing / pager | `eza` (ls), `bat` (cat), GNU `find` + `fd`, `rg`, `nnn`, `ncdu`/`duf` |
 | 🧰 | Daily CLI | archives, `jq`/`jo`/`sqlite3`, `ip`/`ss`/`openssl`, `tmux`, `make`, `vi`/`nano`, `fzf`/`zoxide` — see `dockerzsh --help` |
 | 📖 | Catalogue | `dockerzsh --help` — lists every tool; filter with `dockerzsh --shells` (see [Catalogue CLI](#catalogue-cli-dockerzsh)) |
-| 🌐 | Network | `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`**, `dig`, `socat`, `tcpdump` |
+| 🌐 | Network | `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`**, `ip`/`ss`, `socat`, `tcpdump` |
 | 🔐 | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
 | 🌍 | Locale | `LANG=C.UTF-8` · `LC_ALL=C.UTF-8` |
 | 🧱 | Build `SHELL` | `["/bin/sh", "-c"]` — child `RUN` lines are POSIX, not zsh |
 
 There is **no** `openssh-server`. There is **no** `ENTRYPOINT`: the process you pass to `docker run` / Compose `command:` is what runs.
 
-**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, `file`, `7zip`, `xmllint`, `git-extras`, `gpg`/`gnupg`, `expect`/Tcl, **no sshd**, **no Docker** (`dockerd` / `docker` CLI). Put those — or a Docker client — in a child image. Drive this container with `docker` on the **host**. Commit signing / `git-extras` belong on the host or in a child.
+**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, `file`, `7zip`, `xmllint`, `git-extras`, `gpg`/`gnupg`, `expect`/Tcl, `dig`/`nslookup` (`bind9-dnsutils` / `libicu`), `iperf3`, `rlwrap`, **no sshd**, **no Docker** (`dockerd` / `docker` CLI). Put those — or a Docker client — in a child image. Drive this container with `docker` on the **host**. Commit signing / `git-extras` belong on the host or in a child.
 
-The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…). Extra toys (`tcpdump`/`iperf3`/`htpasswd`) stay because they are small. Do **not** add `git-lfs`, `rclone`, `neovim`, or a Docker client here.
+Container IP: `ip -4 addr`. DNS in use: `/etc/resolv.conf`. Resolve a name: `getent hosts github.com` (same resolver as `curl`/`git`).
+
+The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…). Extra toys (`tcpdump`/`htpasswd`) stay because they are small. Do **not** add `git-lfs`, `rclone`, `neovim`, or a Docker client here.
 
 ---
 
@@ -51,15 +53,15 @@ The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…
 |---|---|---|
 | `ubuntu:24.04` | ~78 MB | ~28 MB |
 | Hub `zsh:v1.0.5` | ~205 MB | ~76 MB |
-| This tree (`v2.0.0`) | measured after slim rebuild | Hub gzip after first tag |
+| This tree (`v2.0.0`) | ~**249 MB** (`zsh-local:dev`) | Hub gzip after first tag |
 
-v1.0.5 was zsh + eza/bat/git and little else. v2.0.0 adds a daily-driver kit **without** the fat deps (`libicu`/`perl`/`python`/`gnupg`/`7zip`/`file`).
+v1.0.5 was zsh + eza/bat/git and little else. v2.0.0 adds a daily-driver kit without ICU/Python/`gnupg`/`7zip`. Ubuntu `git` still pulls **Perl**.
 
-Dropped on purpose (install in a child if needed): `xmllint`, `git-extras`, `file`, `7zip`, `gpg`/`gnupg`, `expect`/Tcl. `rsync` stays (C binary; no Python / `rrsync`).
+Not shipped (child image if needed): `xmllint`, `git-extras`, `file`, `7zip`, `gpg`, `expect`/Tcl, `dig`/`nslookup`, `iperf3`, `rlwrap`. `rsync` stays (C binary; no Python / `rrsync`).
 
 `docker images` is uncompressed. Hub pull is gzip layers (smaller). Oh My Zsh + p10k clones are in both 1.0.5 and 2.0.0.
 
-Exact Hub bytes for **v2.0.0** appear after the first tagged push.
+Exact Hub compressed bytes for **v2.0.0** appear after the first tagged push.
 
 ---
 
@@ -104,24 +106,48 @@ docker compose exec app bash
 
 ## 🔐 sudo
 
-Global files (`/usr/share/globally/.zshrc`) are `644` root:root. uid `1000` cannot overwrite them directly — that is intentional. Use `sudo` or `add_text_to_zshrc` (it escalates with NOPASSWD).
+Default is **NOPASSWD** (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`). Global files
+(`/usr/share/globally/.zshrc`) are `644` root:root. uid `1000` cannot
+overwrite them directly — that is intentional. Use `sudo` or
+`add_text_to_zshrc` (it escalates with NOPASSWD).
+
+The password is **not baked** into the image. You turn it on at runtime.
 
 ```bash
 docker run --rm -it --user 1000:1000 cartagodocker/zsh:v2.0.0
 # inside:
 sudo -n id                 # default: no password
-sudo-password              # prompt; afterwards sudo asks for it
-sudo-password 'secret'     # from arg (visible in ps)
-sudo-nopasswd              # back to NOPASSWD
+
+sudo-password              # TTY prompt (hidden); afterwards sudo asks
+sudo-password 'secret'     # from arg (visible in `ps`)
+SUDO_PASSWORD=secret sudo-password   # from env
+
+sudo-password 'new-secret' # change it (needs the *current* sudo password
+                           # once one is already required)
+sudo-nopasswd              # back to NOPASSWD (needs the current password)
 ```
 
-Password at start (not baked into the image):
+At start (first interactive/login shell applies it via
+`apply-sudo-password-on-boot.sh`):
 
 ```bash
 docker run --rm -it -e SUDO_PASSWORD=secret cartagodocker/zsh:v2.0.0
 ```
 
-Compose `user: "1000:1000"` drops extra groups, so the sudoers rule is `ALL`, not `%sudo`.
+How it works as uid 1000:
+
+| State | `sudo-password` / `sudo-nopasswd` |
+|---|---|
+| NOPASSWD (default) | Escalates with `sudo -n` (no prompt). |
+| Password already on | Escalates with `sudo` — type the **current** password, then the helper sets the new one (or drops it). |
+
+`sudo-password` writes `/etc/container-sudo-password`, switches sudoers
+from `NOPASSWD:ALL` to `ALL`, and `chpasswd`s every login user. Changing
+the password overwrites that file and re-runs `chpasswd`. `sudo -k`
+clears sudo’s ticket cache if an old password still seems to work.
+
+Compose `user: "1000:1000"` drops extra groups, so the sudoers rule is
+`ALL`, not `%sudo`.
 
 ---
 
@@ -270,7 +296,7 @@ dockerzsh eza --version | eza -v
 | `listing` | `eza`, `bat`, `fd`, `rg`, `nnn`, `ncdu`, `duf`, … |
 | `edit` | `nano`, `vi`, `jq`, `jo`, `sqlite3`, … |
 | `archives` | zip/tar/`extract`, `dos2unix`, … |
-| `network` | `curl`, `ssh`/`scp`/`sftp`, `dig`, `socat`, … |
+| `network` | `curl`, `ssh`/`scp`/`sftp`, `ip`/`ss`, `socat`, … |
 | `system` | `git`, `htop`, `tmux`, `sudo`, … |
 | `extras` | `fzf`, `zoxide`, `colordiff`, `patch` |
 | `helpers` | `add_text_to_zshrc`, `share_config_globally`, `sudo-password`, … |

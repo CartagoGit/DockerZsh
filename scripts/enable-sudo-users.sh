@@ -18,7 +18,7 @@ chmod 0440 /etc/sudoers.d/container-nopasswd
 visudo -cf /etc/sudoers.d/container-nopasswd
 
 if [ -f /etc/adduser.conf ]; then
-  sed -i 's/^#*EXTRA_GROUPS=.*/EXTRA_GROUPS="sudo"/; s/^#*ADD_EXTRA_GROUPS=.*/ADD_EXTRA_GROUPS=1/' /etc/adduser.conf
+  sed -i 's/^#*EXTRA_GROUPS=.*/EXTRA_GROUPS="sudo"/; s/^#*ADD_EXTRA_GROUPS=.*/ADD_EXTRA_GROUPS=1/; s|^#*DSHELL=.*|DSHELL=/usr/bin/zsh|' /etc/adduser.conf
 fi
 
 if [ -x /usr/sbin/useradd ] && [ ! -e /usr/sbin/useradd.real ]; then
@@ -32,7 +32,34 @@ cat > /usr/local/sbin/useradd <<'WRAP'
 # options that take a value — not "the last token that is not a flag".
 # `useradd -m alice -c "Full Name"` → alice, not "Full Name".
 real=/usr/sbin/useradd.real
-"$real" "$@"
+# Default login shell is zsh unless the caller passed -s/--shell.
+shell_given=0
+prev=
+for a in "$@"; do
+  if [ "$prev" = 1 ]; then
+    prev=
+    continue
+  fi
+  case "$a" in
+    --shell=*) shell_given=1 ;;
+    -s|--shell)
+      shell_given=1
+      prev=1
+      ;;
+    -*s*)
+      # Combined short opts that include -s (e.g. -ms).
+      case "$a" in
+        --*) ;;
+        *s*) shell_given=1; prev=1 ;;
+      esac
+      ;;
+  esac
+done
+if [ "$shell_given" = 0 ]; then
+  "$real" -s /usr/bin/zsh "$@"
+else
+  "$real" "$@"
+fi
 st=$?
 [ "$st" -eq 0 ] || exit "$st"
 user=

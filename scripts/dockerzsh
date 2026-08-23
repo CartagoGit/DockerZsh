@@ -266,11 +266,6 @@ Network
   fping
       Fast multi-host ping.
 
-  dig / nslookup
-      DNS lookup (bind9-dnsutils).
-
-      dig github.com A
-
   whois
       WHOIS for domains / IPs.
 
@@ -293,16 +288,15 @@ Network
 
   ip / ss
       iproute2: addresses, routes, sockets. `ss -lntp` instead of netstat.
+      Container IP: `ip -4 addr`. DNS in use: `cat /etc/resolv.conf`.
+      Resolve a name with the same resolver as curl/git:
+      `getent hosts github.com` (no dig in this image).
 
   openssl
       TLS, certs, digests. `openssl s_client -connect host:443`.
 
   tcpdump
       Packet capture. Usually needs NET_RAW / NET_ADMIN (or host net).
-
-  iperf3
-      Bandwidth test. Server: iperf3 -s. Client: iperf3 -c host.
-      Often needs extra capabilities / host network.
 
   htpasswd / ab
       apache2-utils: write basic-auth files; tiny HTTP benchmark (ab).
@@ -389,9 +383,6 @@ System / git / process
       Terminal multiplexer. Attach inside a keep-alive container
       so a session survives `docker compose exec` disconnects.
 
-  rlwrap
-      Readline wrapper for CLIs that have no line editing.
-
   keychain
       ssh-agent helper: reuse an agent across shells.
 
@@ -461,17 +452,19 @@ Image helpers (this image — not Ubuntu packages)
       share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --permissions 755
 
   sudo-password [secret]
-      Require a sudo password at runtime (not baked into the image).
-      With no arg and a TTY: hidden prompt. Or pass the secret as
-      arg (visible in `ps`) or SUDO_PASSWORD=secret sudo-password.
-      Writes /etc/container-sudo-password, switches sudoers to
-      require a password, and sets that password on login users.
-      Also: docker run -e SUDO_PASSWORD=secret IMAGE (applied on
-      first shell via apply-sudo-password-on-boot.sh).
+      Require (or change) a sudo password at runtime — not baked
+      into the image. No arg + TTY: hidden prompt. Or pass the
+      secret as arg (visible in `ps`) or SUDO_PASSWORD=secret
+      sudo-password. Writes /etc/container-sudo-password, switches
+      sudoers to require a password, chpasswd on login users.
+      First time (NOPASSWD): escalates with sudo -n. Later change:
+      sudo asks for the *current* password, then the helper sets
+      the new one. Also: docker run -e SUDO_PASSWORD=secret IMAGE
+      (first shell via apply-sudo-password-on-boot.sh).
 
   sudo-nopasswd
       Drop the optional password and restore NOPASSWD (image default).
-      Needs root, or sudo with the current password.
+      Needs root, passwordless sudo, or sudo with the current password.
 
   git-from-host
       Import host user.name / user.email (also from zshrc / git).
@@ -499,13 +492,14 @@ not an image bug.
 
 Not in this image (use a child image): gcc/g++/python3, neovim, git-lfs,
 rclone, locales, man-db, nmap, file, 7zip, xmllint, git-extras, gpg,
-expect/tcl. No sshd. No Docker (dockerd / docker CLI) — install that
-in a child if you need it. tcpdump/iperf3 often need extra Linux
-capabilities (NET_RAW / NET_ADMIN / host network).
+expect/tcl, dig/nslookup (bind9-dnsutils), iperf3, rlwrap. No sshd.
+No Docker (dockerd / docker CLI). tcpdump often needs extra Linux
+capabilities (NET_RAW / NET_ADMIN / host network). DNS of this
+container: /etc/resolv.conf + `getent hosts`.
 
 Size (order of magnitude, amd64): ubuntu:24.04 ~78 MB disk / ~28 MB Hub.
-Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. docker images = disk;
-Hub pull = gzip layers.
+Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. This tree ~249 MB disk.
+docker images = disk; Hub pull = gzip layers.
 EOF
 }
 

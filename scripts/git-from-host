@@ -54,9 +54,10 @@ file_has_identity() {
 try_file() {
   [ -n "${_hit:-}" ] && return 0
   _f=$1
-  [ -n "$_f" ] || return 1
-  file_has_identity "$_f" || return 1
+  [ -n "$_f" ] || return 0
+  file_has_identity "$_f" || return 0
   _hit=$_f
+  return 0
 }
 
 pick_src() {
