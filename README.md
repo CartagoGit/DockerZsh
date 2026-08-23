@@ -18,7 +18,7 @@ Pin a **version tag**. Do not use `latest` in production Dockerfiles.
 FROM cartagodocker/zsh:v2.0.0
 ```
 
-> Hub still has **`v1.0.5`** until this tree is tagged `v2.0.0` and the workflow pushes. Pin `v2.0.0` once it is on Hub. There is no `latest`.
+Pin **`v2.0.0`**. There is no `latest`.
 
 ---
 
@@ -53,15 +53,13 @@ The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…
 |---|---|---|
 | `ubuntu:24.04` | ~78 MB | ~28 MB |
 | Hub `zsh:v1.0.5` | ~205 MB | ~76 MB |
-| This tree (`v2.0.0`) | ~**249 MB** (`zsh-local:dev`) | Hub gzip after first tag |
+| `zsh:v2.0.0` | ~**249 MB** (`zsh-local:dev`) | Hub gzip layers |
 
 v1.0.5 was zsh + eza/bat/git and little else. v2.0.0 adds a daily-driver kit without ICU/Python/`gnupg`/`7zip`. Ubuntu `git` still pulls **Perl**.
 
 Not shipped (child image if needed): `xmllint`, `git-extras`, `file`, `7zip`, `gpg`, `expect`/Tcl, `dig`/`nslookup`, `iperf3`, `rlwrap`. `rsync` stays (C binary; no Python / `rrsync`).
 
 `docker images` is uncompressed. Hub pull is gzip layers (smaller). Oh My Zsh + p10k clones are in both 1.0.5 and 2.0.0.
-
-Exact Hub compressed bytes for **v2.0.0** appear after the first tagged push.
 
 ---
 
@@ -324,4 +322,4 @@ GitHub Actions (secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_PASSWORD`; variable `DO
 | Git tag `v*` | Build + push `cartagodocker/zsh:<tag>` only. No `latest`. — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
 | Push to `main` that changes `README.md` | Docker Hub long description — [update-dockerhub-description.yml](./.github/workflows/update-dockerhub-description.yml) |
 
-See [CHANGELOG.md](./CHANGELOG.md) for unreleased vs published tags.
+See [CHANGELOG.md](./CHANGELOG.md).

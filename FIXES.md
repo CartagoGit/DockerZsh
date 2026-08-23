@@ -10,6 +10,5 @@ bindings, catalogue PATH, git/ssh wrappers (bind at
 `useradd -D` lists (does not set) defaults, `init.defaultBranch=main`,
 per-uid `known_hosts`, `dockerzsh` skips helper probes / `ssh -V` is meta.
 
-Hub is still **`cartagodocker/zsh:v1.0.5`**. That is publish, not a
-code bug: `git tag v2.0.0` + workflow when you want it on Hub.
-Do not retag `v1.0.5`. Then NodeBun (`FROM cartagodocker/zsh:v2.0.0`).
+Tag **`v2.0.0`**. Pin `cartagodocker/zsh:v2.0.0`. Do not retag
+`v1.0.5`. NodeBun uses `FROM cartagodocker/zsh:v2.0.0`.

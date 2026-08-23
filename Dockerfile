@@ -1,5 +1,5 @@
 # Base Ubuntu LTS. Pinneada al tag 24.04 (no latest).
-# Tag de esta imagen: v2.0.0 (Hub sigue en v1.0.5 hasta git tag + push).
+# Tag de esta imagen: v2.0.0.
 FROM ubuntu:24.04
 
 ARG VERSION=2.0.0

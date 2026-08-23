@@ -4,13 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [2.0.0] - unreleased (tag when Hub is updated)
+## [2.0.0] - 2026-08-23
 
-Major bump from Hub **v1.0.5**: CMD without ENTRYPOINT, sudo, UTF-8,
+Major bump from **v1.0.5**: CMD without ENTRYPOINT, sudo, UTF-8,
 daily CLI, SSH/git wrappers, no Docker inside, no `:latest`.
-Hub stays on **v1.0.5** until `git tag v2.0.0` + workflow push.
-NodeBun (next publication) pins **`FROM cartagodocker/zsh:v2.0.0`**.
-Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
+Pin **`cartagodocker/zsh:v2.0.0`**. Child images (NodeBun) use
+`FROM cartagodocker/zsh:v2.0.0`.
 
 ### Added
 - Passwordless `sudo` (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) plus runtime

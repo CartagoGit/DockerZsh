@@ -498,7 +498,7 @@ capabilities (NET_RAW / NET_ADMIN / host network). DNS of this
 container: /etc/resolv.conf + `getent hosts`.
 
 Size (order of magnitude, amd64): ubuntu:24.04 ~78 MB disk / ~28 MB Hub.
-Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. This tree ~249 MB disk.
+zsh v1.0.5 ~205 MB disk / ~76 MB Hub. v2.0.0 ~249 MB disk.
 docker images = disk; Hub pull = gzip layers.
 EOF
 }

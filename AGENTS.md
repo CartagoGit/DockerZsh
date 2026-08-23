@@ -33,4 +33,5 @@ Tracker: `FIXES.md` — **No planned fixes** in the tree.
 
 No Docker CLI in this image (install in a child if needed).
 
-**Publish order:** Hub zsh `v2.0.0` first, then NodeBun (`FROM cartagodocker/zsh:v2.0.0`).
+Tag **`v2.0.0`**. NodeBun pins `FROM cartagodocker/zsh:v2.0.0`.
+Do not retag Hub `v1.0.5`.
