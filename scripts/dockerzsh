@@ -824,8 +824,9 @@ shift
 case "$cmd" in
   section)
     if [ $# -eq 0 ]; then
-      echo "dockerzsh: --section needs an id (try: dockerzsh --sections)" >&2
-      exit 2
+      echo "dockerzsh sections (dockerzsh --shells, dockerzsh shells, dockerzsh --section shells, dockerzsh -s):"
+      list_sections
+      exit 0
     fi
     for raw in "$@"; do
       id=$(normalize_id "$raw")
