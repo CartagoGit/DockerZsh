@@ -1,0 +1,30 @@
+#!/bin/sh
+# Invisible PATH wrapper for ssh / scp / sftp.
+# Copies a :ro ~/.ssh overlay into a 700 dir this uid owns, then execs
+# the real OpenSSH binary with -F. Type `ssh`; do not learn extra paths.
+set -eu
+cmd=$(basename "$0")
+real="/usr/bin/${cmd}"
+if [ ! -x "$real" ]; then
+  echo "ssh-wrap: ${real} not found" >&2
+  exit 127
+fi
+if [ -x /usr/local/bin/ssh-from-host ]; then
+  /usr/local/bin/ssh-from-host || true
+fi
+uid=$(id -u)
+envf="${SSH_FROM_HOST_DEST:-/tmp/container-ssh-${uid}}/env"
+if [ -r "$envf" ]; then
+  # shellcheck disable=SC1090
+  . "$envf"
+fi
+has_f=0
+for a in "$@"; do
+  case "$a" in
+    -F|-F*) has_f=1 ;;
+  esac
+done
+if [ "$has_f" = 0 ] && [ -n "${SSH_CONFIG_FILE:-}" ] && [ -f "$SSH_CONFIG_FILE" ]; then
+  exec "$real" -F "$SSH_CONFIG_FILE" "$@"
+fi
+exec "$real" "$@"

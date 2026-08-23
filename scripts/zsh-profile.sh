@@ -15,3 +15,13 @@ fi
 if [ -x /usr/local/bin/apply-sudo-password-on-boot.sh ]; then
   /usr/local/bin/apply-sudo-password-on-boot.sh || true
 fi
+
+if [ -x /usr/local/bin/ssh-from-host ]; then
+  /usr/local/bin/ssh-from-host || true
+fi
+_ssh_env="/tmp/container-ssh-$(id -u)/env"
+if [ -r "$_ssh_env" ]; then
+  # shellcheck disable=SC1090
+  . "$_ssh_env"
+fi
+unset _ssh_env

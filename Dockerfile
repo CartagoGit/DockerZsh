@@ -21,9 +21,13 @@ ARG ZSH_SYNTAX_HIGHLIGHTING_SHA=5eb677bb0fa9a3e60f0eff031dc13926e093df92
 ARG ZSH_BAT_URL=https://github.com/fdellwing/zsh-bat.git
 ARG ZSH_BAT_SHA=467337613c1c220c0d01d69b19d2892935f43e9f
 
-# Copy zsh and p10k config to /root; share_config_globally las publica
-# en /usr/share/globally y las enlaza a root, /home/* y /etc/skel.
-COPY config/ ${ROOT_HOME}/
+# zsh/p10k to /root (share_config_globally las publica).
+# SSH: known_hosts oficiales + ssh_config.d. Las claves del host se
+# montan en ~/.ssh:ro; ssh-wrap las copia a un dir 700 (OpenSSH rechaza
+# 644/777 y no puede escribir known_hosts en un volumen :ro).
+COPY config/.zshrc config/.p10k.zsh ${ROOT_HOME}/
+COPY config/ssh/known_hosts /tmp/zsh-ssh-known_hosts
+COPY config/ssh/50-container.conf /tmp/zsh-ssh-50-container.conf
 COPY scripts/ ${SCRIPTS_HOME}/
 
 # Comentarios FUERA del bloque RUN (un # a mitad de \ trunca el
@@ -37,15 +41,23 @@ COPY scripts/ ${SCRIPTS_HOME}/
 #   7. sudo NOPASSWD (ALL, no %sudo): uid 1000 escribe globales con sudo,
 #      no con 777 en .zshrc. Optional password via SUDO_PASSWORD / sudo-password.
 #   8. LANG=C.UTF-8: eza/p10k/emoji necesitan UTF-8 (POSIX trunca iconos).
-#   9. CLI extras (budget < ~50 MB installed, file/libmagic ~8 MB):
-#      less file unzip jq zip xz bzip2 ping tree patch nano fd rg duf
-#      fzf zoxide tzdata dig rsync psmisc lsof nc htop sqlite3 traceroute
-#      bsdextrautils (hexdump, column). GNU find stays. No gcc/python/locales.
+#   9. CLI extras: daily-driver kit for any uid / any host. No gcc, no
+#      python, no locales, no man-db, no git-lfs/rclone/neovim (those
+#      belong in child images). Extra layer vs previous extras ~34 MB.
+#  10. No Docker CLI. docker-ce-cli + compose plugin is ~91 MiB
+#      installed — too much for this shell base. Use docker on the host.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl wget git openssh-client zsh bat eza ca-certificates sudo \
-        less file unzip jq xz-utils zip bzip2 iputils-ping tree patch nano \
-        fd-find ripgrep duf fzf zoxide tzdata bind9-dnsutils rsync \
-        psmisc lsof netcat-openbsd htop sqlite3 traceroute bsdextrautils \
+        less file nano vim-tiny tree patch fd-find ripgrep fzf zoxide \
+        unzip zip xz-utils bzip2 zstd lz4 pigz cpio 7zip cabextract \
+        jq jo libxml2-utils sqlite3 \
+        iputils-ping iputils-tracepath fping bind9-dnsutils rsync \
+        netcat-openbsd socat traceroute mtr-tiny whois iproute2 openssl \
+        tcpdump apache2-utils iperf3 \
+        psmisc lsof htop ncdu duf tzdata bsdextrautils moreutils pv bc \
+        uuid-runtime acl libcap2-bin inotify-tools entr \
+        gnupg gettext-base make strace xxd uchardet dos2unix colordiff expect \
+        progress keychain rlwrap tig git-extras tmux nnn \
     && for script in ${SCRIPTS_HOME}/*.zsh; do \
          if [ -f "$script" ]; then \
            mv "$script" "${script%.zsh}"; \
@@ -60,6 +72,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
                   ${SCRIPTS_HOME}/apply-sudo-password-on-boot.sh \
                   ${SCRIPTS_HOME}/zsh-profile.sh \
                   ${SCRIPTS_HOME}/dockerzsh \
+                  ${SCRIPTS_HOME}/ssh-from-host \
+                  ${SCRIPTS_HOME}/ssh-wrap \
+    && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/ssh \
+    && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/scp \
+    && ln -sfn ${SCRIPTS_HOME}/ssh-wrap ${SCRIPTS_HOME}/sftp \
+    && install -d -m 0755 /usr/share/ssh /etc/ssh/ssh_config.d \
+    && install -m 0644 /tmp/zsh-ssh-known_hosts /usr/share/ssh/known_hosts \
+    && install -m 0644 /tmp/zsh-ssh-known_hosts /etc/ssh/ssh_known_hosts \
+    && install -m 0644 /tmp/zsh-ssh-50-container.conf /etc/ssh/ssh_config.d/50-container.conf \
+    && rm -f /tmp/zsh-ssh-known_hosts /tmp/zsh-ssh-50-container.conf \
     && clone_pinned() { \
          _url="$1"; _dest="$2"; _sha="$3"; \
          mkdir -p "$_dest"; \
@@ -94,6 +116,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV VERSION=${VERSION} \
     SHELL=/usr/bin/zsh \
     LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8
+    LC_ALL=C.UTF-8 \
+    GIT_SSH_COMMAND=/usr/local/bin/ssh
 SHELL ["/bin/sh", "-c"]
 CMD ["/usr/bin/zsh"]

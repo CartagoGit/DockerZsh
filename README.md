@@ -27,15 +27,17 @@ FROM cartagodocker/zsh:v1.0.6
 | 🐧 | OS | Ubuntu 24.04 LTS (Noble) |
 | 🐚 | Interactive shell | zsh + Oh My Zsh + Powerlevel10k — `CMD ["/usr/bin/zsh"]` |
 | 💻 | Other shells | `bash` and `sh` (dash) stay installed |
-| 📂 | Listing / pager | `eza` (ls), `bat` (cat), GNU `find` + `fd`, `rg` (ripgrep) |
-| 🧰 | Small CLI | `less`, `file`, `jq`, `unzip`/`zip`/`xz`/`bzip2`, `tree`, `patch`, `nano`, `ping`, `dig`, `nc`, `rsync`, `htop`, `lsof`, `sqlite3`, `duf`, `fzf`, `zoxide` (`z`) |
-| 📖 | Catalogue | `dockerzsh --help` — lists every tool this image ships |
-| 🌐 | Network | `curl`, `wget`, `git`, `openssh-client`, **`ca-certificates`** |
-| 🔐 | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
+| 📂 | Listing / pager | `eza` (ls), `bat` (cat), GNU `find` + `fd`, `rg`, `nnn`, `ncdu`/`duf` |
+| 🧰 | Daily CLI | archives, `jq`/`jo`/`sqlite3`, `ip`/`ss`/`openssl`, `tmux`, `make`, `gpg`, `vi`/`nano`, `fzf`/`zoxide` — see `dockerzsh --help` |
+| 📖 | Catalogue | `dockerzsh --help` — lists every tool; filter with `dockerzsh --shells` (see [Catalogue CLI](#catalogue-cli-dockerzsh)) |
+| 🌐 | Network | `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`**, `dig`, `socat`, `tcpdump` |
+|  | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
 | 🌍 | Locale | `LANG=C.UTF-8` · `LC_ALL=C.UTF-8` |
 | 🧱 | Build `SHELL` | `["/bin/sh", "-c"]` — child `RUN` lines are POSIX, not zsh |
 
 There is **no** `openssh-server`. There is **no** `ENTRYPOINT`: the process you pass to `docker run` / Compose `command:` is what runs.
+
+**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, **no sshd**, **no Docker CLI** (`docker-ce-cli` + compose is ~91 MiB installed). Put compilers in a child image. Use `docker` on the host.
 
 ---
 
@@ -161,21 +163,86 @@ share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --permissions 755
 
 ---
 
-## 🔑 SSH (git over SSH)
+## 🔑 SSH (client only — no sshd)
 
-Client only. Mount keys from the host:
-
-```bash
-docker run --rm -it -v ~/.ssh:/root/.ssh:ro cartagodocker/zsh:v1.0.6
-```
+`openssh-client` is installed. Bind-mount host `~/.ssh` and type `ssh` / `git`. Root or any uid — one volume is enough.
 
 ```yaml
 services:
   dev:
     image: cartagodocker/zsh:v1.0.6
     volumes:
-      - ~/.ssh:/root/.ssh:ro
+      - ~/.ssh:/${USER}/.ssh:ro
 ```
+
+```bash
+docker run --rm -it \
+  -v "$HOME/.ssh:/$USER/.ssh:ro" \
+  cartagodocker/zsh:v1.0.6
+# inside: ssh git@github.com
+```
+
+`${USER}` is the **host** name. Docker needs an **absolute** target (`/${USER}/.ssh` → `/cartago/.ssh`), not `${USER}/.ssh`. That path is not `$HOME` in the container. The client finds any bind ending in `.ssh`, copies keys to a `700` dir this uid owns (OpenSSH rejects `644`/`777` and cannot write `known_hosts` on `:ro`), and `ssh`/`git` just work as root or as any other user.
+
+**`known_hosts` — bringing the host file is optional, not required:**
+
+The bind is the whole `~/.ssh` directory, so if the host has `known_hosts` it comes in with the keys. That is expected.
+
+| Layer | Where | What |
+|---|---|---|
+| Official (baked) | `/usr/share/ssh/known_hosts` and `/etc/ssh/ssh_known_hosts` | GitHub / GitLab host keys. `GlobalKnownHostsFile`. Same content twice so `/usr/bin/ssh` still trusts them if someone bypasses the wrapper. |
+| Your host file (if present) | copied / merged into `/tmp/container-ssh-<uid>/known_hosts` | Used as-is. New hosts (`accept-new`) are appended **there**, never on the `:ro` volume. Re-runs merge new host lines and keep container-learned hosts. |
+
+Without a host `known_hosts`, GitHub / GitLab still work from the baked file. Other hosts are learned on first connect and stay in `/tmp` for this container lifetime.
+
+**Agent** (key never enters the container) still works if you already use one:
+
+```bash
+docker run --rm -it \
+  -v "$SSH_AUTH_SOCK":/ssh-agent \
+  -e SSH_AUTH_SOCK=/ssh-agent \
+  cartagodocker/zsh:v1.0.6
+```
+
+This is not SSH-into-the-container. Attach from the host: `docker exec -it … zsh`.
+
+---
+
+## 📖 Catalogue CLI (`dockerzsh`)
+
+Inside a running container this image ships **`dockerzsh`**: a catalogue of every tool and helper, not the host `docker` CLI.
+
+```bash
+docker run --rm cartagodocker/zsh:v1.0.6 dockerzsh --help
+docker compose exec app dockerzsh --help
+```
+
+The full dump is long on purpose (what each tool does, typical invocation, image caveats). Filter by **section**:
+
+```bash
+dockerzsh --sections            # list ids
+dockerzsh --shells              # one section
+dockerzsh shells                # same (flag or bare id)
+dockerzsh --section shells      # same
+dockerzsh shells network        # several sections
+dockerzsh --version             # VERSION + zsh --version
+```
+
+| Id | Section |
+|---|---|
+| `about` | What this image is (CMD, no ENTRYPOINT, TTY vs keep-alive) |
+| `usage` | How to invoke `dockerzsh` |
+| `shells` | `zsh` / `bash` / `sh` |
+| `listing` | `eza`, `bat`, `fd`, `rg`, `nnn`, `ncdu`, `duf`, … |
+| `edit` | `nano`, `vi`, `jq`, `jo`, `sqlite3`, … |
+| `archives` | zip/tar/7z, `extract`, `dos2unix`, … |
+| `network` | `curl`, `ssh`/`scp`/`sftp`, `dig`, `socat`, … |
+| `system` | `git`, `htop`, `tmux`, `sudo`, … |
+| `extras` | `fzf`, `zoxide`, `colordiff`, `patch` |
+| `helpers` | `add_text_to_zshrc`, `share_config_globally`, `sudo-password`, … |
+| `fonts` | Host fonts + what is **not** in this image |
+
+Unknown ids exit `2` and point at `--sections`. `--shells` and `shells` are the same id (`listing` also accepts `--ls`).
 
 ---
 

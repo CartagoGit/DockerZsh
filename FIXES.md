@@ -50,7 +50,7 @@ El bug `ENTRYPOINT ["zsh"]` (`docker run img echo hello` → `can't open input f
 3. `RUN` de hijas en POSIX sh (`SHELL ["/bin/sh","-c"]`).
 4. HTTPS (`ca-certificates`).
 5. sudo NOPASSWD `ALL` (Compose `user: 1000:1000`). Globales `644`/`755`.
-6. `LANG=C.UTF-8`. os_icon 🐳 (`U+1F433`); powerline/eza = Nerd Font **en el host**.
+6. `LANG=C.UTF-8`. os_icon 🐳 (`🐳`); powerline/eza = Nerd Font **en el host**.
 7. Helpers hijas: `add_text_to_zshrc`, `add_text_to_p10k`, `share_config_globally`.
 8. `dockerzsh --help` lista lo que hay.
 
@@ -82,10 +82,12 @@ El bug `ENTRYPOINT ["zsh"]` (`docker run img echo hello` → `can't open input f
 | 20 | uid 1000 login zsh | media | [x] (#3) |
 | 23 | sudo NOPASSWD en **esta** imagen | crítica | [x] |
 | 24 | `LANG=C.UTF-8` / `LC_ALL` | alta | [x] |
-| 25 | os_icon 🐳 `U+1F433` (no NF `U+F308`) | alta | [x] |
+| 25 | os_icon 🐳 `🐳` (no NF `U+F308`) | alta | [x] |
 | 26 | `ARG VERSION=1.0.6` + `ENV VERSION` + `--build-arg` en workflow | media | [x] |
 | 27 | CLI extras + `dockerzsh` | baja | [x] |
 | 28 | `.gitignore` (estaba vacío) | baja | [x] |
+| 35 | `known_hosts` baked + copia/merge del host en `/tmp` | media | [x] |
+| 36 | Quitar Docker CLI (~91 MiB: docker-ce-cli + compose) | media | [x] |
 
 ### Abiertos (código / docs / CI)
 
@@ -98,7 +100,7 @@ El bug `ENTRYPOINT ["zsh"]` (`docker run img echo hello` → `can't open input f
 | 31 | Workflow publica `:latest` y el README dice “no uses latest” | media | [ ] | Política dual: documentar o dejar de pushear `latest`. |
 | 32 | `share_config_globally`: `shift 2` sin comprobar `$2` | baja | [ ] | `--to` / `--base-src` / `--permissions` sueltos se comen el `src`. |
 | 33 | `useradd` wrapper: último arg no-flag = usuario | baja | [ ] | `useradd -m alice -c "foo"` puede asociar mal. |
-| 34 | `fzf` instalado; **no** hay key-bindings en `.zshrc` | baja | [ ] | `dockerzsh` promete Ctrl+R “if key-bindings loaded”. No se cargan. |
+| 34 | `fzf` key-bindings en `.zshrc` | baja | [x] | `.zshrc` sourcea `/usr/share/doc/fzf/examples/key-bindings.zsh` (noble: sin gzip). |
 | 35 | Este `FIXES.md` contradecía el contrato (U+F308 vs 🐳; #18 hecho y pendiente) | docs | [x] | Este rewrite. |
 
 ---
@@ -109,7 +111,7 @@ El bug `ENTRYPOINT ["zsh"]` (`docker run img echo hello` → `can't open input f
 
 **Qué pasa:** `docker inspect cartagodocker/zsh:v1.0.5` → `Entrypoint=["zsh"]`, `Cmd=null`, `Shell=["zsh","-c"]`. Local `zsh-local:dev` → `Entrypoint=null`, `Cmd=["/usr/bin/zsh"]`, `Shell=["/bin/sh","-c"]`.
 
-**Por qué importa:** cualquier hija (`NodeBun` 2.0.0) **hereda el ENTRYPOINT**. `docker run nodebun node --version` → `zsh: can't open input file: node`. Compose `command: ["tail","-f","/dev/null"]` igual.
+**Por qué importa:** el **tag Hub NodeBun 2.0.0** (sobre zsh 1.0.5) hereda el ENTRYPOINT. `docker run nodebun node --version` → `can't open input file: node`. El árbol NodeBun unreleased pinnea 1.0.6 y **deja** de heredarlo cuando se construya contra Hub 1.0.6.
 
 **Arreglo:** tag + push 1.0.6. **Después** se construye/publica NodeBun (ya pinnea 1.0.6). Las hijas que aún usen Hub `zsh:v1.0.5` necesitan `--entrypoint` hasta entonces.
 
@@ -127,7 +129,11 @@ No pican el build (el Dockerfile pasa args completos). Pican a una hija que invo
 
 ### 34 — fzf
 
-Paquete presente. Sin `/usr/share/doc/fzf/examples/key-bindings.zsh` en `.zshrc`, Ctrl+R sigue siendo el de zsh. Docs vs realidad.
+Cerrado en el árbol: `.zshrc` recorre las rutas Debian/Ubuntu y sourcea
+el primer `key-bindings.zsh` / `completion.zsh` legible. En noble el
+deb `fzf` 0.44.1 deja esos ficheros **sin gzip** en
+`/usr/share/doc/fzf/examples/`. Ctrl-R / Ctrl-T / Alt-C cargan en zsh
+interactivo. `dockerzsh extras` ya no dice “if present”.
 
 ---
 
@@ -162,6 +168,7 @@ Eso es el baseline. 1.0.6 lo sustituye; **no** se retaggea 1.0.5.
 | 2026-08-23 | Auditoría Hub v1.0.5. |
 | 2026-08-23 | `94d6b0f` en main: reescritura (aún sin tag). |
 | 2026-08-23 | Working tree = **1.0.6**. NodeBun unreleased pinnea **1.0.6**. Orden: Hub zsh primero. |
+| 2026-08-23 | Quitar Docker CLI (~91 MiB). `known_hosts` del bind se copia/merge; no wipe en re-run. |
 
 ## Cola de publicación (no corre sola)
 

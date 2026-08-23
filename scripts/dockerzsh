@@ -7,16 +7,60 @@ usage() {
   cat <<'EOF'
 cartagodocker/zsh — Ubuntu 24.04 LTS + zsh + Oh My Zsh + Powerlevel10k.
 
-A base image: same .zshrc / .p10k.zsh / Oh My Zsh for root, uid 1000, and
-new users (/etc/skel) via /usr/share/globally. No ENTRYPOINT — CMD is zsh.
-Compose keep-alive (tail -f /dev/null) is not a shell; attach with
-  docker compose exec <svc> zsh
-to get eza, bat, and the prompt.
+This command is the image catalogue. It is not `docker` on the host.
+Run it inside a running container:
 
-Usage:
   dockerzsh
   dockerzsh --help | -h
   dockerzsh --version | -v
+  dockerzsh --sections
+  dockerzsh --shells
+  dockerzsh shells network
+
+##id:about
+========================================================================
+What this image is
+========================================================================
+
+A shell base for interactive work and for child images (for example
+cartagodocker/nodebun). Root, uid 1000 (ubuntu), and later `useradd -m`
+users share the same .zshrc, .p10k.zsh, and Oh My Zsh via
+/usr/share/globally (symlinked into each home and /etc/skel).
+
+There is no ENTRYPOINT. CMD is /usr/bin/zsh. Whatever you pass to
+`docker run` / Compose `command:` is the process that actually runs.
+
+Two different jobs — mixing them looks like "eza is broken":
+
+  Interactive prompt (eza, bat, p10k, aliases)
+    docker run --rm -it cartagodocker/zsh
+    docker exec -it <container> zsh
+    docker compose exec <svc> zsh
+
+  Keep-alive (Compose)
+    command: ["tail", "-f", "/dev/null"]
+    That process is tail, not zsh, and not a TTY. No prompt, no eza
+    aliases. Attach later with: docker compose exec <svc> zsh
+
+Build SHELL is ["/bin/sh", "-c"] so child Dockerfiles do not inherit
+zsh -c for RUN. Locale is LANG=C.UTF-8 / LC_ALL=C.UTF-8.
+HTTPS works: ca-certificates is installed.
+No Docker CLI and no sshd. Attach with docker exec from the host.
+
+##id:usage
+========================================================================
+Usage
+========================================================================
+
+  dockerzsh                 Same as --help (this catalogue)
+  dockerzsh --help | -h     This text
+  dockerzsh --version | -v  Image VERSION + zsh --version
+  dockerzsh --sections      List section ids
+  dockerzsh --shells        One section (also: dockerzsh shells)
+  dockerzsh shells network  Several sections
+
+  Section ids: about usage shells listing edit archives
+               network system extras helpers fonts
 
 EOF
   tools
@@ -24,59 +68,414 @@ EOF
 
 tools() {
   cat <<'EOF'
---- shells ---
-  zsh           Default interactive shell (Oh My Zsh + Powerlevel10k)
-  bash          GNU bash (docker run IMAGE bash, or type bash inside zsh)
-  sh            POSIX sh (dash on Ubuntu)
+##id:shells
+========================================================================
+Shells
+========================================================================
 
---- listing / viewing (upgrades of ls / cat / find / grep) ---
-  eza           Modern ls (icons, git, colours). Aliased as: ls
-  bat           Syntax-highlighting cat (Debian name batcat). /usr/local/bin/bat
-  fd            Fast find (Debian name fdfind). GNU find stays as: find
-  rg            ripgrep — fast recursive grep
-  less          Pager (git log / git diff use this)
-  file          Identify a file from its bytes (libmagic database)
-  tree          Directory tree
+  zsh
+      Default interactive shell. Oh My Zsh + Powerlevel10k. This is
+      CMD. Aliases (ls→eza), prompt, and plugins load only in an
+      interactive zsh TTY — not under `tail -f /dev/null`.
 
---- edit / JSON / archives ---
-  nano          Small terminal editor (Ctrl+O save, Ctrl+X quit)
-  jq            JSON query/pretty-print
-  unzip / zip   Extract / create zip archives
-  xz / bzip2    .xz and .bz2 compression (tar and gzip are already in Ubuntu)
-  patch         Apply unified diffs
-  sqlite3       Command-line SQLite
-  hexdump       Dump file bytes (bsdextrautils; also: column)
+  bash
+      GNU bash. Use `docker run IMAGE bash`, `docker compose exec svc
+      bash`, or type `bash` inside zsh. Login bash sources
+      /etc/profile.d/zsh-image.sh (UTF-8 + optional SUDO_PASSWORD).
 
---- network / system ---
-  curl / wget   HTTP(S) download
-  git           Version control
-  ssh           OpenSSH client (no sshd server)
-  ping          ICMP ping (iputils-ping)
-  dig/nslookup  DNS lookup (bind9-dnsutils)
-  rsync         Copy trees over ssh or locally
-  nc            netcat (netcat-openbsd) — TCP/UDP swiss army knife
-  traceroute    Trace IP path
-  htop          Interactive process viewer (top is already in Ubuntu)
-  lsof          List open files / sockets
-  killall       Kill by name (psmisc; also: pstree, fuser)
-  sudo          Passwordless by default. sudo-password / sudo-nopasswd to toggle
+  sh
+      POSIX sh (dash on Ubuntu). Use for portable snippets. Login
+      `sh -l` also sources profile.d.
 
---- extras ---
-  fzf           Fuzzy finder (Ctrl+R history if key-bindings loaded)
-  zoxide        Smarter cd; command: z  (learns directories you visit)
-  duf           df with colours (disk usage)
+##id:listing
+========================================================================
+Listing / viewing (upgrades of ls / cat / find / grep)
+========================================================================
 
---- image helpers (this image) ---
-  add_text_to_zshrc     Append/prepend text to the shared .zshrc
-  add_text_to_p10k      Same for .p10k.zsh
-  share_config_globally Publish a file/dir from /root to every user
-  sudo-password         Require a sudo password (runtime; not baked in)
-  sudo-nopasswd         Restore passwordless sudo
-  dockerzsh             This catalogue
+  eza
+      Modern ls: colours, git status, icons (needs a Nerd Font on the
+      HOST). Aliased as `ls` inside interactive zsh. GNU ls remains
+      `/usr/bin/ls` if you need it.
+
+      eza -la                  long + hidden
+      eza --tree --level=2     tree view
+      ls                       same as eza (zsh alias)
+
+  bat
+      Syntax-highlighting cat. Debian package name is batcat; this
+      image puts /usr/local/bin/bat → batcat so `bat file` works.
+
+      bat README.md
+      bat -n Dockerfile        with line numbers
+
+  fd
+      Fast find (Debian name fdfind). GNU find stays as `find`.
+
+      fd Dockerfile
+      fd -e zsh scripts        only .zsh files under scripts/
+
+  rg  (ripgrep)
+      Fast recursive grep. Ignores .gitignore by default.
+
+      rg 'NOPASSWD' /etc/sudoers.d
+      rg -n TODO .
+
+  less
+      Pager. git log / git diff use this. q to quit.
+
+  file
+      Identify a file from its bytes (libmagic). Useful when a bind
+      mount has no extension.
+
+      file /usr/bin/zsh
+
+  tree
+      Print a directory tree. eza --tree is the colour alternative.
+
+  nnn
+      Terminal file manager. Arrow keys / hjkl; q to quit.
+
+  ncdu
+      Interactive disk usage (du with a TUI). Walk a bind-mounted
+      project when the image is unexpectedly large.
+
+  duf
+      Colourful df: filesystems, sizes, mount points.
+
+##id:edit
+========================================================================
+Edit / data
+========================================================================
+
+  nano
+      Small terminal editor. Ctrl+O save, Ctrl+X quit.
+
+  vi
+      vim-tiny. Enough for scripts that call `vi` / `$EDITOR`. Not
+      neovim (put that in a child image).
+
+  jq
+      Query / transform JSON on stdin or files.
+
+      echo '{"a":1}' | jq .a
+
+  jo
+      Build JSON from arguments (the inverse of jq for simple objects).
+
+      jo name=app version=1.0
+
+  xmllint
+      Parse / pretty-print XML (libxml2-utils).
+
+      xmllint --format file.xml
+
+  sqlite3
+      Command-line SQLite. Open a .db and run SQL.
+
+  hexdump / xxd
+      Dump file bytes. xxd also reverses dumps (`xxd -r`).
+
+  bc
+      Arbitrary-precision calculator.
+
+      echo '2^10' | bc
+
+  column
+      Align columns (bsdextrautils). Pipe TSV/CSV-ish text through it.
+
+##id:archives
+========================================================================
+Archives / text conversion
+========================================================================
+
+  unzip / zip
+      zip archives. unzip is required by many installers.
+
+  tar / gzip
+      Already in Ubuntu. tar -xzf archive.tar.gz, etc.
+
+  xz / bzip2 / zstd / lz4 / pigz / cpio
+      Extra compressors. pigz is parallel gzip. cpio for initramfs /
+      rpm-style archives.
+
+  7z
+      7-Zip (7zip package). .7z and several other formats.
+
+  cabextract
+      Extract .cab (Windows cabinet) files.
+
+  extract / x
+      Oh My Zsh helper: picks unzip/tar/7z/… from the file extension.
+
+      extract archive.tar.xz
+
+  uchardet
+      Detect text encoding (UTF-8 vs Latin-1 vs Windows-1252).
+
+  dos2unix
+      CRLF → LF. Handy on bind mounts from Windows hosts.
+
+##id:network
+========================================================================
+Network
+========================================================================
+
+  curl / wget
+      HTTP(S) download. ca-certificates is installed so https:// works.
+
+  ssh / scp / sftp
+      OpenSSH **client** only — there is no sshd in this image.
+      Bind-mount host ~/.ssh (Compose: ~/.ssh:/${USER}/.ssh:ro —
+      Docker needs the leading /) and type `ssh`. The wrapper finds
+      that bind even when it is not $HOME (${USER} is the host name),
+      copies keys into a 700 dir this uid owns, and works as root or
+      any other user.
+
+      known_hosts — two layers; bringing the host file is optional:
+        1. Official GitHub/GitLab keys baked in the image:
+           /usr/share/ssh/known_hosts and /etc/ssh/ssh_known_hosts
+           (GlobalKnownHostsFile). Same file twice so /usr/bin/ssh
+           still trusts them if someone bypasses the wrapper.
+        2. If the bind includes known_hosts, it is copied to
+           /tmp/container-ssh-<uid>/known_hosts (writable). New hosts
+           from StrictHostKeyChecking=accept-new are appended THERE,
+           never on the :ro volume. Re-runs merge host lines and
+           keep container-learned hosts. Without a host file, the
+           baked keys still cover github.com / gitlab.com.
+
+      docker run -v ~/.ssh:/$USER/.ssh:ro -it IMAGE
+      ssh git@github.com
+
+  ssh-from-host
+      Copy host keys now (also runs from zshrc / profile.d / ssh).
+      SSH_FROM_HOST_VERBOSE=1 to see the copy. You do not need to
+      call this yourself.
+
+  ping
+      ICMP ping. Often needs NET_RAW or --cap-add NET_RAW.
+
+  tracepath
+      Path MTU discovery without root.
+
+  fping
+      Fast multi-host ping.
+
+  dig / nslookup
+      DNS lookup (bind9-dnsutils).
+
+      dig github.com A
+
+  whois
+      WHOIS for domains / IPs.
+
+  mtr
+      traceroute + ping in one TUI (mtr-tiny).
+
+  traceroute
+      Classic traceroute.
+
+  rsync
+      Copy directory trees over ssh or locally.
+
+      rsync -a /work/ user@host:/backup/
+
+  nc
+      netcat (netcat-openbsd). TCP/UDP swiss army knife.
+
+  socat
+      Bidirectional relay — more than nc (unix sockets, TLS, exec).
+
+  ip / ss
+      iproute2: addresses, routes, sockets. `ss -lntp` instead of netstat.
+
+  openssl
+      TLS, certs, digests. `openssl s_client -connect host:443`.
+
+  tcpdump
+      Packet capture. Usually needs NET_RAW / NET_ADMIN (or host net).
+
+  iperf3
+      Bandwidth test. Server: iperf3 -s. Client: iperf3 -c host.
+      Often needs extra capabilities / host network.
+
+  htpasswd / ab
+      apache2-utils: write basic-auth files; tiny HTTP benchmark (ab).
+
+##id:system
+========================================================================
+System / git / process
+========================================================================
+
+  git / tig
+      Version control + git TUI (tig). HTTPS remotes work
+      (ca-certificates). SSH remotes: mount ~/.ssh and type git
+      (GIT_SSH_COMMAND uses the same ssh wrapper).
+
+  git-extras
+      Extra git subcommands: git-summary, git-ignore, git-info, …
+
+  gpg
+      GnuPG: verify signatures, git commit signing.
+
+  make
+      GNU make. There is no gcc/g++ in this image — Makefiles that
+      only run scripts/docker are fine; compiling C needs a child image.
+
+  envsubst
+      Expand $VARS in files (gettext-base). Typical: templates → env.
+
+  htop
+      Interactive process viewer. `top` is already in Ubuntu.
+
+  lsof
+      List open files / sockets. `lsof -i :3000`.
+
+  killall
+      Kill by name (psmisc). Also: pstree, fuser.
+
+  pv
+      Pipe progress (bytes through a pipeline).
+
+      tar -c dir | pv | gzip > dir.tar.gz
+
+  sponge
+      moreutils: write a file only after stdin ends. Safe in-place
+      filter: `jq . file.json | sponge file.json`.
+
+  uuidgen
+      Generate UUIDs.
+
+  getfacl / setfacl
+      POSIX ACLs on files.
+
+  getcap / setcap
+      File capabilities (libcap2-bin).
+
+  inotifywait
+      Watch files for changes (inotify-tools).
+
+  entr
+      Run a command when files change. `ls *.c | entr make`.
+
+  strace
+      Trace syscalls (why a process hangs or fails).
+
+  progress
+      Show progress of an already-running cp/mv/dd.
+
+  tmux
+      Terminal multiplexer. Attach inside a keep-alive container
+      so a session survives `docker compose exec` disconnects.
+
+  rlwrap
+      Readline wrapper for CLIs that have no line editing.
+
+  expect
+      Automate interactive programs (password prompts, etc.).
+
+  keychain
+      ssh-agent helper: reuse an agent across shells.
+
+  sudo
+      Passwordless by default: ALL ALL=(ALL:ALL) NOPASSWD:ALL.
+      Compose `user: "1000:1000"` drops extra groups, so the rule is
+      ALL, not %sudo. Global configs are 644 root:root; uid 1000
+      cannot overwrite them directly — use sudo or the helpers below.
+
+      sudo -n id               # default: no password
+      sudo-password            # start requiring one
+      sudo-nopasswd            # back to NOPASSWD
+
+##id:extras
+========================================================================
+Extras (fuzzy find, cd, diffs)
+========================================================================
+
+  fzf
+      Fuzzy finder. Interactive zsh sources
+      /usr/share/doc/fzf/examples/key-bindings.zsh and completion.zsh
+      (uncompressed on Ubuntu 24.04). Ctrl-R history, Ctrl-T files,
+      Alt-C cd. The binary also works as a pipe filter in any shell.
+
+      fd | fzf
+      git log --oneline | fzf
+
+  zoxide
+      Smarter cd; command is `z`. Learns directories you visit.
+
+      z dockerzsh              jump to a known path fragment
+
+  colordiff
+      Colourful diff. `colordiff -u a b`.
+
+  patch
+      Apply unified diffs. `patch -p1 < fix.diff`.
+
+##id:helpers
+========================================================================
+Image helpers (this image — not Ubuntu packages)
+========================================================================
+
+  add_text_to_zshrc <text> [--prepend]
+      Append (default) or prepend text to the shared
+      /usr/share/globally/.zshrc. Every user (root, uid 1000, new
+      useradd -m) sees it. Escalates with NOPASSWD sudo when the
+      file is 644 root:root. --prepend may appear in any position.
+
+      add_text_to_zshrc "alias hello='echo hi'"
+      add_text_to_zshrc "alias hello='echo hi'" --prepend
+      add_text_to_zshrc "$(printf '%s\n' 'line1' 'line2')"
+
+  add_text_to_p10k <text> [--prepend]
+      Same contract as add_text_to_zshrc, writes
+      /usr/share/globally/.p10k.zsh.
+
+      add_text_to_p10k "typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose"
+
+  share_config_globally <src> [--to <name>] [--base-src <root>] [--permissions <octal>]
+      Move a file/dir from a user home (default /root) to /usr/share
+      and symlink it into every existing home + /etc/skel. Child
+      images use this for fnm/bun stores.
+
+      share_config_globally .local/share/fnm
+      share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --permissions 755
+
+  sudo-password [secret]
+      Require a sudo password at runtime (not baked into the image).
+      With no arg and a TTY: hidden prompt. Or pass the secret as
+      arg (visible in `ps`) or SUDO_PASSWORD=secret sudo-password.
+      Writes /etc/container-sudo-password, switches sudoers to
+      require a password, and sets that password on login users.
+      Also: docker run -e SUDO_PASSWORD=secret IMAGE (applied on
+      first shell via apply-sudo-password-on-boot.sh).
+
+  sudo-nopasswd
+      Drop the optional password and restore NOPASSWD (image default).
+      Needs root, or sudo with the current password.
+
+  dockerzsh
+      This catalogue.
+
+##id:fonts
+========================================================================
+Fonts, locale, what is NOT in this image
+========================================================================
 
 Locale: LANG=C.UTF-8. HTTPS: ca-certificates is installed.
-Prompt whale 🐳 needs an emoji font on the HOST. Powerline / eza icons
-need a Nerd Font on the HOST (Cascadia Code NF / CaskaydiaCove).
+The container only emits Unicode; the HOST terminal draws glyphs.
+
+  Prompt whale (os_icon, 🐳)  -> emoji font on the host
+                                     (Noto Color Emoji / Segoe UI Emoji / Apple)
+  Powerline / eza icons            -> Nerd Font on the host
+                                     (Cascadia Code NF / CaskaydiaCove)
+
+Without a Nerd Font you get boxes on the prompt / ls icons. That is
+not an image bug.
+
+Not in this image (use a child image): gcc/g++/python3, neovim, git-lfs,
+rclone, locales, man-db, nmap. No sshd. No Docker CLI (docker-ce-cli
+is ~91 MiB installed; use docker on the host). tcpdump/iperf3
+often need extra Linux capabilities (NET_RAW / NET_ADMIN / host network).
 EOF
 }
 
@@ -85,12 +484,116 @@ version() {
   command -v zsh >/dev/null && zsh --version || true
 }
 
-case "${1:-}" in
-  -h|--help|"") usage ;;
-  -v|--version) version ;;
+# Markers ##id:<name> sit on their own line before each section title.
+# They are stripped from output. --shells / shells / --section shells
+# all mean the same thing. Several ids: dockerzsh shells network
+normalize_id() {
+  id=$(printf '%s' "$1" | tr 'A-Z' 'a-z')
+  while [ "${id#-}" != "$id" ]; do
+    id=${id#-}
+  done
+  case "$id" in
+    help|h) id=help ;;
+    version|v) id=version ;;
+    sections) id=sections ;;
+    section) id=section ;;
+    ls|list|view|viewing) id=listing ;;
+    data) id=edit ;;
+    archive) id=archives ;;
+    net|ssh) id=network ;;
+    git|process) id=system ;;
+    extra) id=extras ;;
+    helper) id=helpers ;;
+    font|locale|missing) id=fonts ;;
+    image) id=about ;;
+  esac
+  printf '%s' "$id"
+}
+
+catalogue() {
+  usage
+}
+
+strip_ids() {
+  grep -v '^##id:'
+}
+
+list_sections() {
+  catalogue | awk '
+    /^##id:/ { id = substr($0, 6); next }
+    id != "" && $0 != "" && $0 !~ /^=+$/ {
+      printf "  %-12s %s\n", id, $0
+      id = ""
+    }
+  '
+}
+
+show_sections() {
+  want=
+  for raw in "$@"; do
+    id=$(normalize_id "$raw")
+    want="${want}${want:+ }${id}"
+  done
+  catalogue | awk -v want="$want" '
+    BEGIN {
+      n = split(want, w, " ")
+      for (i = 1; i <= n; i++) ids[w[i]] = 1
+    }
+    /^##id:/ {
+      cur = substr($0, 6)
+      show = (cur in ids)
+      next
+    }
+    show { print }
+  '
+}
+
+unknown_section() {
+  echo "dockerzsh: unknown section: $1" >&2
+  echo "Try: dockerzsh --sections" >&2
+  echo "     dockerzsh --help" >&2
+  exit 2
+}
+
+# First token may be --shells, shells, --section, or a bare id.
+if [ $# -eq 0 ]; then
+  catalogue | strip_ids
+  exit 0
+fi
+
+cmd=$(normalize_id "$1")
+shift
+case "$cmd" in
+  help)
+    catalogue | strip_ids
+    ;;
+  version)
+    version
+    ;;
+  sections)
+    echo "dockerzsh sections (dockerzsh --shells, dockerzsh shells, dockerzsh --section shells):"
+    list_sections
+    ;;
+  section)
+    if [ $# -eq 0 ]; then
+      echo "dockerzsh: --section needs an id (try: dockerzsh --sections)" >&2
+      exit 2
+    fi
+    for raw in "$@"; do
+      id=$(normalize_id "$raw")
+      catalogue | grep -q "^##id:${id}$" || unknown_section "$raw"
+    done
+    show_sections "$@"
+    ;;
+  about|usage|shells|listing|edit|archives|network|system|extras|helpers|fonts)
+    set -- "$cmd" "$@"
+    for raw in "$@"; do
+      id=$(normalize_id "$raw")
+      catalogue | grep -q "^##id:${id}$" || unknown_section "$raw"
+    done
+    show_sections "$@"
+    ;;
   *)
-    echo "dockerzsh: unknown option: $1" >&2
-    echo "Try: dockerzsh --help" >&2
-    exit 2
+    unknown_section "$cmd"
     ;;
 esac
