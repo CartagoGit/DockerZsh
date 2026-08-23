@@ -12,8 +12,9 @@ https://hub.docker.com/repository/docker/cartagodocker/zsh
 
 Image for charging in other docker images to get zsh as shell default for root or for other existing or new users in the containers.
 
-> This dockerfile use Ubuntu 24.04
-> This image has curl, wget, ssh and git installed.
+> Ubuntu 24.04. zsh + Oh My Zsh + Powerlevel10k. eza (fork activo de exa) y bat.
+> curl, wget, git, openssh-client, ca-certificates, sudo (NOPASSWD). bash y sh siguen disponibles.
+> `LANG=C.UTF-8`. Iconos de eza/p10k necesitan Nerd Font en **el terminal del host**.
 
 ---
 
@@ -31,6 +32,16 @@ docker build -t zsh-image -f ./Dockerfile ./
 docker run --rm -it --name zsh-container zsh-image
 ```
 
+Interactive default is zsh (p10k). bash/sh are still there:
+
+```bash
+docker run --rm -it zsh-image bash
+# inside zsh:
+bash
+sh
+exit
+```
+
 ## Create debug-container for user 1000:1000
 
 ```bash
@@ -39,14 +50,27 @@ docker run --rm -it --name zsh-container --user 1000:1000 zsh-image
 
 ## Upload docker image to dockerhub
 
-With github actions in repository it will be update automaticatlly in DockerHub with the tag of branches.
+GitHub Actions builds and pushes on git tags `v*`.
 
 ## To use in other docker images
 
-Just add the next line in the Dockerfile to base the other image on this one.
+Pin a version tag (not `latest`) so rebuilds stay reproducible.
 
 ```Dockerfile
-FROM cartagodocker/zsh:latest
+FROM cartagodocker/zsh:v1.0.5
+```
+
+Child Dockerfiles should keep `SHELL ["/bin/sh", "-c"]` for `RUN` (this image already sets it). The user still gets zsh via `CMD`.
+
+### sudo
+
+Passwordless by default (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) so Compose `user: 1000:1000` (no supplementary groups) still works. Global configs stay `644`/`755`; uid 1000 edits them with `sudo` (or `add_text_to_zshrc`, which escalates). Optional password is runtime-only:
+
+```bash
+docker run --rm -it -e SUDO_PASSWORD=secret zsh-image
+# inside:
+sudo-password              # prompt
+sudo-nopasswd              # back to NOPASSWD
 ```
 
 ---
@@ -95,7 +119,7 @@ add_text_to_zshrc "$(printf '%s\n' \
 ### Example to use multiline in other DockerFile
 
 ```Dockerfile
-FROM cartagodocker/zsh:latest
+FROM cartagodocker/zsh:v1.0.5
 
 RUN add_text_to_zshrc "$(printf '%s\n' \
     'alias my_command="echo Hi, Cartago!"' \
@@ -104,14 +128,14 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'ls -ln')" --prepend
 ```
 
-## `add_text_to_p10k` - To add commands or text in the .zshrc file
+## `add_text_to_p10k` - To add commands or text in the `.p10k.zsh` file
 
 It works like the `add_text_to_zshrc` script but it adds the text to the `.p10k.zsh` file.
 
 ### Example usage:
 
 ```bash
-add_text_to_zshrc "typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose"
+add_text_to_p10k "typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose"
 ```
 
 ## `share_config_globally` - To share configuration between users in Dockerfile installations
@@ -133,13 +157,13 @@ If you wish to share the configuration with other users, you can use the script 
 Format:
 
 ```vbnet
-    Usage: share_config_globally <src> [--to <destination_name --default= source folder name] [--base-src <source_base_path --default='/root'] [--permissions <permissions --default='777']]
+    Usage: share_config_globally <src> [--to <destination_name --default= source folder name] [--base-src <source_base_path --default='/root'] [--permissions <permissions --default='755']]
 
     Parameters:
         src             Path to the source file or folder (required) (Dont need to be the full path, just the path from the base folder, for example: /.local/share/fnm)
       --to            Name of the destination folder (optional - default: source folder name)
       --base-src      Path to the source file or folder (optional - default: /root)
-      --permissions   Permissions for the destination (optional, default: 777)
+      --permissions   Permissions for the destination (optional, default: 755)
 
     Example:
         share_config_globally .local/share --to fnm --base-src /root --permissions 755
@@ -157,7 +181,7 @@ In this case `fnm` and `/root` will be the default values, so you can use the co
 #### Example usage in Dockerfile with fnm:
 
 ```Dockerfile
-FROM cartagodocker/zsh:latest
+FROM cartagodocker/zsh:v1.0.5
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl unzip ca-certificates \
     && curl -fsSL ${FNM_URL} -o /tmp/fnm.zip \
@@ -176,7 +200,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #### Other Example usage in Dockerfile with bun.js:
 
 ```Dockerfile
-FROM cartagodocker/zsh:latest
+FROM cartagodocker/zsh:v1.0.5
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && curl -fsSL ${BUN_URL} | bash \
@@ -194,7 +218,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 
 The image has been created with a config for `CaskaydiaCove Nerd Font` to look the theme correctly.
 
-[Donwload CaskaydiaCove Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip)
+Icons (eza file glyphs, p10k powerline, the 🐳 os_icon) are **drawn by the host terminal**, not by the container. Linux/macOS/Windows all need a Nerd Font selected in that terminal (VS Code: `terminal.integrated.fontFamily`). Without it you get boxes/`?`, not a DockerZsh bug. Emoji (🐳) also needs a font with emoji (Windows Terminal / VS Code usually have one; some Linux VTE terminals do not). The image sets `LANG=C.UTF-8` so the bytes are valid UTF-8.
+
+[Download CaskaydiaCove Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip)
 
 You can try other nerdfont for your host terminal, but is possible it doesn't look correctly.
 

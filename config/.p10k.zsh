@@ -203,9 +203,11 @@
   # OS identifier color.
   # typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=255
   typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=233
-  # Custom icon.
-  # typeset -g POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='⭐'
-  typeset -g POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🐳 '
+  # Whale emoji (U+1F433). Present on Windows (Segoe UI Emoji) and macOS
+  # (Apple Color Emoji) without Nerd Font. Some Linux VTE terminals still
+  # show tofu unless an emoji font is installed. The REST of p10k (powerline
+  # separators, git, eza) still needs Nerd Font — this only fixes os_icon.
+  typeset -g POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION=$'\U1F433 '
 
   ################################[ prompt_char: prompt symbol ]################################
   # Transparent background.
