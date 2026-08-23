@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.0.6] - unreleased (tag when Hub is updated)
+## [2.0.0] - unreleased (tag when Hub is updated)
 
-Hub sigue en **v1.0.5** hasta `git tag v1.0.6` + push del workflow.
-NodeBun (siguiente publicación) pinnea **`FROM cartagodocker/zsh:v1.0.6`**.
-Orden: publicar zsh 1.0.6, **después** NodeBun.
+Major bump from Hub **v1.0.5**: CMD without ENTRYPOINT, sudo, UTF-8,
+daily CLI, SSH/git wrappers, no Docker inside, no `:latest`.
+Hub stays on **v1.0.5** until `git tag v2.0.0` + workflow push.
+NodeBun (next publication) pins **`FROM cartagodocker/zsh:v2.0.0`**.
+Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
 
 ### Added
 - Passwordless `sudo` (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) plus runtime
@@ -68,8 +70,14 @@ Orden: publicar zsh 1.0.6, **después** NodeBun.
 ### Fixed
 - `ca-certificates` is no longer purged (git HTTPS works).
 - Build `RUN` no longer ends with `|| true`.
-- `share_config_globally` applies `--to` before computing the destination.
+- `share_config_globally` applies `--to` before computing the destination;
+  flags require a value (`--to --permissions` no longer eats `src`).
+- `useradd` wrapper treats LOGIN as the leftover positional (so
+  `useradd -m alice -c "Full Name"` joins `alice` to sudo, not the comment).
 - `add_text_to_*` accept `--prepend` in any position; no double `echo -e`.
+- GitHub Actions pinned to SHAs. Workflow no longer pushes `:latest`.
+- `ZSH_IMAGE_VERSION` ENV so `dockerzsh --version` stays the zsh tag if a
+  child overwrites `VERSION`.
 - `ssh-from-host` no longer wipes `known_hosts` on every run (would drop
   hosts learned via `accept-new`). Host file lines are merged in.
 
@@ -79,3 +87,4 @@ Orden: publicar zsh 1.0.6, **después** NodeBun.
 - Docker inside the image (`docker-ce-cli` + compose plugin +
   `docker-wrap`). Use `docker` on the host. A child image can
   install a client if it needs one.
+- Hub tag `:latest` is no longer published. Pin `v2.0.0`.

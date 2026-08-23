@@ -1,8 +1,8 @@
 # Base Ubuntu LTS. Pinneada al tag 24.04 (no latest).
-# Tag de esta imagen: v1.0.6 (Hub sigue en v1.0.5 hasta git tag + push).
+# Tag de esta imagen: v2.0.0 (Hub sigue en v1.0.5 hasta git tag + push).
 FROM ubuntu:24.04
 
-ARG VERSION=1.0.6
+ARG VERSION=2.0.0
 ARG ROOT_HOME=/root
 ARG SCRIPTS_HOME=/usr/local/bin
 
@@ -117,7 +117,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # y $(...). zsh -c se parte o se traga errores. El usuario interactivo
 # entra por CMD zsh, no por SHELL ni ENTRYPOINT.
 # Sin ENTRYPOINT: `docker run imagen bash` lanza bash, no "can't open input file".
+# VERSION = this image. Child images (nodebun) often set their own
+# VERSION; ZSH_IMAGE_VERSION stays the zsh tag so dockerzsh --version
+# does not lie after FROM.
 ENV VERSION=${VERSION} \
+    ZSH_IMAGE_VERSION=${VERSION} \
     SHELL=/usr/bin/zsh \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \

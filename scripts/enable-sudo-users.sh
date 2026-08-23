@@ -27,15 +27,58 @@ fi
 
 cat > /usr/local/sbin/useradd <<'WRAP'
 #!/bin/sh
+# After a successful useradd, put LOGIN in group sudo (and apply the
+# optional container password). LOGIN is the leftover positional after
+# options that take a value — not "the last token that is not a flag".
+# `useradd -m alice -c "Full Name"` → alice, not "Full Name".
 real=/usr/sbin/useradd.real
 "$real" "$@"
 st=$?
 [ "$st" -eq 0 ] || exit "$st"
 user=
-for a in "$@"; do
-  case "$a" in
-    -*) ;;
-    *) user=$a ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --)
+      shift
+      [ $# -gt 0 ] && user=$1
+      break
+      ;;
+    --comment=*|--home-dir=*|--home=*|--base-dir=*|--expiredate=*|--inactive=*|--gid=*|--groups=*|--skel=*|--key=*|--password=*|--shell=*|--uid=*|--selinux-user=*|--root=*|--prefix=*|--selinux-range=*)
+      shift
+      ;;
+    -c|--comment|-d|--home-dir|--home|-b|--base-dir|-e|--expiredate|-f|--inactive|-g|--gid|-G|--groups|-k|--skel|-K|--key|-p|--password|-s|--shell|-u|--uid|-Z|--selinux-user|-R|--root|-P|--prefix|--selinux-range)
+      shift
+      [ $# -gt 0 ] || break
+      shift
+      ;;
+    --*)
+      shift
+      ;;
+    -*)
+      opt=${1#-}
+      shift
+      while [ -n "$opt" ]; do
+        ch=${opt%"${opt#?}"}
+        rest=${opt#?}
+        case "$ch" in
+          c|d|b|e|f|g|G|k|K|p|s|u|Z|R|P)
+            if [ -n "$rest" ]; then
+              opt=
+            else
+              [ $# -gt 0 ] && shift
+              opt=
+            fi
+            ;;
+          *)
+            opt=$rest
+            ;;
+        esac
+      done
+      ;;
+    *)
+      user=$1
+      shift
+      ;;
   esac
 done
 if [ -n "$user" ] && id "$user" >/dev/null 2>&1; then

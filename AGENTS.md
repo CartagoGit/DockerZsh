@@ -29,19 +29,16 @@ This is **not** a repo bug. The tree is valid UTF-8. The Grok provider serialize
 
 ## Remaining work (zsh)
 
-Tracker: `FIXES.md`. Working tree is **1.0.6**, not on Hub yet.
+Tracker: `FIXES.md`. Working tree is **v2.0.0**, not on Hub yet.
 
 Open (do not invent extra scope):
 
 | # | What |
 |---|---|
-| 29 | Tag + publish `v1.0.6` to Hub (blocker for NodeBun). |
-| 30 | Pin GitHub Actions to SHAs. |
-| 31 | `:latest` vs README “do not use latest”. |
-| 32 | `share_config_globally` `shift 2` without checking `$2`. |
-| 33 | `useradd` wrapper last non-flag arg. |
-| 34 | `fzf` binary present; key-bindings not sourced in `.zshrc`. |
+| 29 | Tag + publish `v2.0.0` to Hub (blocker for NodeBun). Wait until the tree is ready. |
 
-Dirty tree on `fixes-pre-1.0.6` may include SSH wrappers, `config/ssh/`, catalogue text — continue that work; do not revert `FROM`/VERSION to 1.0.5. No Docker CLI in this image (install in a child if needed).
+#30 (Actions SHA), #31 (no `:latest`), #32 (`share_config_globally` optargs), #33 (`useradd` LOGIN), #34 (fzf key-bindings) are done in this tree.
 
-**Publish order:** Hub zsh `v1.0.6` first, then NodeBun (already pins `zsh:v1.0.6`).
+Do not revert `FROM`/VERSION to 1.0.5. Do not retag Hub `v1.0.5`. No Docker CLI in this image (install in a child if needed).
+
+**Publish order:** Hub zsh `v2.0.0` first, then NodeBun (`FROM cartagodocker/zsh:v2.0.0`).

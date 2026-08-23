@@ -518,7 +518,7 @@ CLI) — install that in a child if you need it. tcpdump/iperf3
 often need extra Linux capabilities (NET_RAW / NET_ADMIN / host network).
 
 Size (order of magnitude, amd64): ubuntu:24.04 ~78 MB disk / ~28 MB Hub.
-Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. This tree (v1.0.6) is about
+Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. This tree (v2.0.0) is about
 +45-55 MB on Hub for the daily CLI extras (~123 MB uncompressed with
 deps; libicu74 from xmllint is the fat one). docker images = disk;
 Hub pull = gzip layers.
@@ -526,7 +526,8 @@ EOF
 }
 
 version() {
-  echo "cartagodocker/zsh  VERSION=${VERSION:-}  SHELL=${SHELL:-/usr/bin/zsh}  LANG=${LANG:-}"
+  # Child images may overwrite ENV VERSION. ZSH_IMAGE_VERSION is the zsh tag.
+  echo "cartagodocker/zsh  VERSION=${ZSH_IMAGE_VERSION:-${VERSION:-}}  SHELL=${SHELL:-/usr/bin/zsh}  LANG=${LANG:-}"
   command -v zsh >/dev/null && zsh --version || true
 }
 

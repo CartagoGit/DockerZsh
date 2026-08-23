@@ -4,6 +4,8 @@ Ubuntu **24.04 LTS** with **zsh** as the default interactive shell — Oh My Zsh
 
 Base image for others (for example [`cartagodocker/nodebun`](https://hub.docker.com/r/cartagodocker/nodebun)). Root, uid `1000` (`ubuntu`), and later `useradd -m` users share the same `.zshrc` / `.p10k.zsh` / Oh My Zsh via `/usr/share/globally`.
 
+The [nodebun README](https://github.com/CartagoGit/DockerNodeBun#readme) uses the **same section order**. This page is the contract for the shell base; NodeBun only documents runtimes it adds.
+
 | | |
 |---|---|
 | 📦 GitHub | https://github.com/CartagoGit/DockerZsh |
@@ -13,10 +15,10 @@ Base image for others (for example [`cartagodocker/nodebun`](https://hub.docker.
 Pin a **version tag**. Do not use `latest` in production Dockerfiles.
 
 ```dockerfile
-FROM cartagodocker/zsh:v1.0.6
+FROM cartagodocker/zsh:v2.0.0
 ```
 
-> Hub still has **`v1.0.5`** until this tree is tagged `v1.0.6` and the workflow pushes. Pin `v1.0.6` once it is on Hub.
+> Hub still has **`v1.0.5`** until this tree is tagged `v2.0.0` and the workflow pushes. Pin `v2.0.0` once it is on Hub. There is no `latest`.
 
 ---
 
@@ -31,7 +33,7 @@ FROM cartagodocker/zsh:v1.0.6
 | 🧰 | Daily CLI | archives, `jq`/`jo`/`sqlite3`, `ip`/`ss`/`openssl`, `tmux`, `make`, `gpg`, `vi`/`nano`, `fzf`/`zoxide` — see `dockerzsh --help` |
 | 📖 | Catalogue | `dockerzsh --help` — lists every tool; filter with `dockerzsh --shells` (see [Catalogue CLI](#catalogue-cli-dockerzsh)) |
 | 🌐 | Network | `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`**, `dig`, `socat`, `tcpdump` |
-|  | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
+| 🔐 | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
 | 🌍 | Locale | `LANG=C.UTF-8` · `LC_ALL=C.UTF-8` |
 | 🧱 | Build `SHELL` | `["/bin/sh", "-c"]` — child `RUN` lines are POSIX, not zsh |
 
@@ -49,9 +51,9 @@ The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…
 |---|---|---|
 | `ubuntu:24.04` | ~78 MB | ~28 MB |
 | Hub `zsh:v1.0.5` | ~205 MB | ~76 MB |
-| This tree (`v1.0.6`) | ~**240–260 MB** | ~**110–125 MB** |
+| This tree (`v2.0.0`) | ~**240–260 MB** | ~**110–125 MB** |
 
-v1.0.5 was zsh + eza/bat/git and little else. v1.0.6 adds the daily-driver apt kit on top of that.
+v1.0.5 was zsh + eza/bat/git and little else. v2.0.0 adds the daily-driver apt kit on top of that.
 
 | Slice | Uncompressed | Compressed (gzip of debs, order of magnitude) |
 |---|---|---|
@@ -60,9 +62,9 @@ v1.0.5 was zsh + eza/bat/git and little else. v1.0.6 adds the daily-driver apt k
 | Heaviest unique dep | `libicu74` ~35 MB (`xmllint` / `libxml2`) | ~10 MB |
 | Docker CLI (dropped) | would have been ~91 MB | ~27 MB |
 
-`docker images` is uncompressed. Hub pull is gzip layers (smaller). Oh My Zsh + p10k clones are in both 1.0.5 and 1.0.6.
+`docker images` is uncompressed. Hub pull is gzip layers (smaller). Oh My Zsh + p10k clones are in both 1.0.5 and 2.0.0.
 
-Exact Hub bytes for **v1.0.6** appear after the first tagged push. Until then the table is measured from Ubuntu 24.04 package metadata + Hub v1.0.5.
+Exact Hub bytes for **v2.0.0** appear after the first tagged push. Until then the table is measured from Ubuntu 24.04 package metadata + Hub v1.0.5.
 
 ---
 
@@ -75,8 +77,8 @@ Two different jobs. Mix them up and it looks like “eza is broken”.
 Needs a **TTY** (`-it` or `exec -it`).
 
 ```bash
-docker run --rm -it cartagodocker/zsh:v1.0.6
-docker run --rm -it --user 1000:1000 cartagodocker/zsh:v1.0.6
+docker run --rm -it cartagodocker/zsh:v2.0.0
+docker run --rm -it --user 1000:1000 cartagodocker/zsh:v2.0.0
 docker exec -it <container> zsh
 ```
 
@@ -89,7 +91,7 @@ The container stays up **without** a shell. Typical:
 ```yaml
 services:
   app:
-    image: cartagodocker/zsh:v1.0.6
+    image: cartagodocker/zsh:v2.0.0
     command: ["tail", "-f", "/dev/null"]
     user: "1000:1000"
 ```
@@ -110,7 +112,7 @@ docker compose exec app bash
 Global files (`/usr/share/globally/.zshrc`) are `644` root:root. uid `1000` cannot overwrite them directly — that is intentional. Use `sudo` or `add_text_to_zshrc` (it escalates with NOPASSWD).
 
 ```bash
-docker run --rm -it --user 1000:1000 cartagodocker/zsh:v1.0.6
+docker run --rm -it --user 1000:1000 cartagodocker/zsh:v2.0.0
 # inside:
 sudo -n id                 # default: no password
 sudo-password              # prompt; afterwards sudo asks for it
@@ -121,7 +123,7 @@ sudo-nopasswd              # back to NOPASSWD
 Password at start (not baked into the image):
 
 ```bash
-docker run --rm -it -e SUDO_PASSWORD=secret cartagodocker/zsh:v1.0.6
+docker run --rm -it -e SUDO_PASSWORD=secret cartagodocker/zsh:v2.0.0
 ```
 
 Compose `user: "1000:1000"` drops extra groups, so the sudoers rule is `ALL`, not `%sudo`.
@@ -162,7 +164,7 @@ add_text_to_zshrc "$(printf '%s\n' \
 ```
 
 ```dockerfile
-FROM cartagodocker/zsh:v1.0.6
+FROM cartagodocker/zsh:v2.0.0
 RUN add_text_to_zshrc "$(printf '%s\n' \
     'alias hello="echo hi"')"
 ```
@@ -195,7 +197,7 @@ share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --permissions 755
 ```yaml
 services:
   dev:
-    image: cartagodocker/zsh:v1.0.6
+    image: cartagodocker/zsh:v2.0.0
     volumes:
       - ~/.ssh:/${USER}/.ssh:ro
       - ~/.gitconfig:/${USER}/.gitconfig:ro
@@ -205,7 +207,7 @@ services:
 docker run --rm -it \
   -v "$HOME/.ssh:/$USER/.ssh:ro" \
   -v "$HOME/.gitconfig:/$USER/.gitconfig:ro" \
-  cartagodocker/zsh:v1.0.6
+  cartagodocker/zsh:v2.0.0
 # inside: ssh git@github.com
 #         git commit   # author = host user.name, not ubuntu@id
 ```
@@ -233,7 +235,7 @@ Without a host `known_hosts`, GitHub / GitLab still work from the baked file. Ot
 docker run --rm -it \
   -v "$SSH_AUTH_SOCK":/ssh-agent \
   -e SSH_AUTH_SOCK=/ssh-agent \
-  cartagodocker/zsh:v1.0.6
+  cartagodocker/zsh:v2.0.0
 ```
 
 This is not SSH-into-the-container. Attach from the host: `docker exec -it … zsh`.
@@ -245,7 +247,7 @@ This is not SSH-into-the-container. Attach from the host: `docker exec -it … z
 Inside a running container this image ships **`dockerzsh`**: a catalogue of every tool and helper, not the host `docker` CLI.
 
 ```bash
-docker run --rm cartagodocker/zsh:v1.0.6 dockerzsh --help
+docker run --rm cartagodocker/zsh:v2.0.0 dockerzsh --help
 docker compose exec app dockerzsh --help
 ```
 
@@ -281,14 +283,14 @@ Unknown ids exit `2` and point at `--sections`. `--shells` and `shells` are the 
 ## 🚀 Build and publish
 
 ```bash
-docker build --build-arg VERSION=1.0.6 -t zsh-local:dev -f ./Dockerfile ./
+docker build --build-arg VERSION=2.0.0 -t zsh-local:dev -f ./Dockerfile ./
 ```
 
 GitHub Actions (secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_PASSWORD`; variable `DOCKERHUB_REPO`):
 
 | Trigger | What happens |
 |---|---|
-| Git tag `v*` | Build + push `cartagodocker/zsh:<tag>` and `:latest` — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
+| Git tag `v*` | Build + push `cartagodocker/zsh:<tag>` only. No `latest`. — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
 | Push to `main` that changes `README.md` | Docker Hub long description — [update-dockerhub-description.yml](./.github/workflows/update-dockerhub-description.yml) |
 
 See [CHANGELOG.md](./CHANGELOG.md) for unreleased vs published tags.
