@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- GitHub Release on tag push (`docker-hub-update.yml`). If a Release
+  for that tag already exists, it is deleted and recreated. Hub is
+  unchanged: existing Hub tags are skipped (delete them on Hub to
+  republish the image).
+
 ### Changed
 - README “What's in the image” no longer truncates the daily CLI
   (`…`). New **Utilities** section lists every extra binary with a

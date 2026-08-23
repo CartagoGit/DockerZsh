@@ -452,7 +452,7 @@ GitHub Actions (secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_PASSWORD`; variable `DO
 
 | Trigger | What happens |
 |---|---|
-| Git tag `v*` | Build + push `cartagodocker/zsh:<tag>` only. No `latest`. — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
+| Git tag `v*` | Build + push `cartagodocker/zsh:<tag>` if that Hub tag is new (skip if it already exists). Create/replace a GitHub Release for the same tag. No Hub `:latest`. — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
 | Push to `main` that changes `README.md` | Docker Hub long description — [update-dockerhub-description.yml](./.github/workflows/update-dockerhub-description.yml) |
 
 See [CHANGELOG.md](./CHANGELOG.md).
