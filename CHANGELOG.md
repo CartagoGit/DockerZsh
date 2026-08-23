@@ -19,16 +19,17 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
 - Docker Hub description workflow (same as NodeBun: Hub login JWT,
   `jq --rawfile`, push to `main` when `README.md` changes).
 - CLI extras (daily-driver, no gcc/python/locales/man-db).
-  Size vs Hub v1.0.5: about **+123 MB uncompressed** / **+45–55 MB**
-  on Hub (gzip). Named extras ~53 MB; `libicu74` (~35 MB) comes with
-  `xmllint`. Docker CLI was **not** added (~91 MB). README “Image size”.
+  Fat deps (`libicu`/`perl`/`python`/`gnupg`/`7zip`/`file`) stay
+  out. Docker CLI was **not** added. README “Image size”.
 - Daily-driver packages:
-  `less`, `file`, `nano`, `vim-tiny` (`vi`), `fd`/`rg`/`fzf`/`zoxide`,
-  archives (`unzip`/`zip`/`xz`/`bzip2`/`zstd`/`lz4`/`pigz`/`cpio`/`7zip`/`cabextract`),
-  data (`jq`/`jo`/`xmllint`/`sqlite3`/`bc`/`hexdump`/`xxd`),
+  `less`, `nano`, `vim-tiny` (`vi`), `fd`/`rg`/`fzf`/`zoxide`,
+  archives (`unzip`/`zip`/`xz`/`bzip2`/`zstd`/`lz4`/`pigz`/`cpio`/`cabextract`),
+  data (`jq`/`jo`/`sqlite3`/`bc`/`hexdump`/`xxd`),
   net (`ping`/`tracepath`/`fping`/`dig`/`whois`/`mtr`/`nc`/`socat`/`ip`/`ss`/`openssl`/`tcpdump`/`iperf3`/`rsync`),
-  sys (`htop`/`lsof`/`ncdu`/`duf`/`tmux`/`nnn`/`make`/`gpg`/`envsubst`/`pv`/`sponge`/`uuidgen`/`inotifywait`/`entr`/`strace`/`tig`/`git-extras`/`acl`/`setcap`/`expect`/`keychain`/`rlwrap`/`dos2unix`/`uchardet`/`colordiff`/`progress`/`htpasswd`).
-- Oh My Zsh plugins `extract` and `sudo`; fzf key-bindings when present.
+  sys (`htop`/`lsof`/`ncdu`/`duf`/`tmux`/`nnn`/`make`/`envsubst`/`pv`/`sponge`/`uuidgen`/`inotifywait`/`entr`/`strace`/`tig`/`acl`/`setcap`/`keychain`/`rlwrap`/`dos2unix`/`uchardet`/`colordiff`/`progress`/`htpasswd`).
+- Oh My Zsh plugins `extract` and `sudo`; fzf key-bindings (Ubuntu
+  Docker images drop `/usr/share/doc`; this tree keeps
+  `/usr/share/doc/fzf/examples`).
 - `dockerzsh --help` catalogue of everything the image ships.
 - SSH client: official GitHub/GitLab `known_hosts` baked at
   `/usr/share/ssh/known_hosts` and `/etc/ssh/ssh_known_hosts`. Host
@@ -51,8 +52,11 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
   blurb, typical invocation, and image-specific caveats (TTY vs
   keep-alive, ssh bind-mount, sudo ALL vs %sudo, fzf bindings).
   Sections are filterable: `dockerzsh --shells`, `dockerzsh shells`,
-  `dockerzsh shells network`, `dockerzsh --sections`. Documented in
-  README “Catalogue CLI”.
+  `dockerzsh shells network`, `dockerzsh --sections | -s`.
+  `--version | -v` is image identity. Tool versions are discovered
+  from catalogue headings: `dockerzsh --list --version | -l -v`,
+  `dockerzsh shells --version | shells -v`, `dockerzsh eza -v`.
+  Documented in README “Catalogue CLI”.
 - `CMD ["/usr/bin/zsh"]` instead of `ENTRYPOINT ["zsh"]`. Compose
   `command: ["tail", "-f", "/dev/null"]` and `docker run image bash`
   work. Interactive default is still zsh.
@@ -88,3 +92,6 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
   `docker-wrap`). Use `docker` on the host. A child image can
   install a client if it needs one.
 - Hub tag `:latest` is no longer published. Pin `v2.0.0`.
+- Slim kit (install in a child if needed): `xmllint` (`libicu74`),
+  `git-extras` (full Perl), `file` (`libmagic-mgc`), `7zip`,
+  `gpg`/`gnupg`, `expect`/Tcl. `rsync` stays; Python/`rrsync` do not.

@@ -30,7 +30,7 @@ FROM cartagodocker/zsh:v2.0.0
 | 🐚 | Interactive shell | zsh + Oh My Zsh + Powerlevel10k — `CMD ["/usr/bin/zsh"]` |
 | 💻 | Other shells | `bash` and `sh` (dash) stay installed |
 | 📂 | Listing / pager | `eza` (ls), `bat` (cat), GNU `find` + `fd`, `rg`, `nnn`, `ncdu`/`duf` |
-| 🧰 | Daily CLI | archives, `jq`/`jo`/`sqlite3`, `ip`/`ss`/`openssl`, `tmux`, `make`, `gpg`, `vi`/`nano`, `fzf`/`zoxide` — see `dockerzsh --help` |
+| 🧰 | Daily CLI | archives, `jq`/`jo`/`sqlite3`, `ip`/`ss`/`openssl`, `tmux`, `make`, `vi`/`nano`, `fzf`/`zoxide` — see `dockerzsh --help` |
 | 📖 | Catalogue | `dockerzsh --help` — lists every tool; filter with `dockerzsh --shells` (see [Catalogue CLI](#catalogue-cli-dockerzsh)) |
 | 🌐 | Network | `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`**, `dig`, `socat`, `tcpdump` |
 | 🔐 | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
@@ -39,7 +39,7 @@ FROM cartagodocker/zsh:v2.0.0
 
 There is **no** `openssh-server`. There is **no** `ENTRYPOINT`: the process you pass to `docker run` / Compose `command:` is what runs.
 
-**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, **no sshd**, **no Docker** (`dockerd` / `docker` CLI). Put compilers — or a Docker client — in a child image. Drive this container with `docker` on the **host**.
+**Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, `file`, `7zip`, `xmllint`, `git-extras`, `gpg`/`gnupg`, `expect`/Tcl, **no sshd**, **no Docker** (`dockerd` / `docker` CLI). Put those — or a Docker client — in a child image. Drive this container with `docker` on the **host**. Commit signing / `git-extras` belong on the host or in a child.
 
 The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…). Extra toys (`tcpdump`/`iperf3`/`htpasswd`) stay because they are small. Do **not** add `git-lfs`, `rclone`, `neovim`, or a Docker client here.
 
@@ -51,20 +51,15 @@ The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…
 |---|---|---|
 | `ubuntu:24.04` | ~78 MB | ~28 MB |
 | Hub `zsh:v1.0.5` | ~205 MB | ~76 MB |
-| This tree (`v2.0.0`) | ~**240–260 MB** | ~**110–125 MB** |
+| This tree (`v2.0.0`) | measured after slim rebuild | Hub gzip after first tag |
 
-v1.0.5 was zsh + eza/bat/git and little else. v2.0.0 adds the daily-driver apt kit on top of that.
+v1.0.5 was zsh + eza/bat/git and little else. v2.0.0 adds a daily-driver kit **without** the fat deps (`libicu`/`perl`/`python`/`gnupg`/`7zip`/`file`).
 
-| Slice | Uncompressed | Compressed (gzip of debs, order of magnitude) |
-|---|---|---|
-| Named extras only (`fd`/`rg`/`fzf`/archives/…) | ~53 MB | ~18 MB debs |
-| Those extras + their apt deps, minus the core already in v1.0.5 | ~**123 MB** | ~**38 MB** debs → ~**45–55 MB** extra on Hub |
-| Heaviest unique dep | `libicu74` ~35 MB (`xmllint` / `libxml2`) | ~10 MB |
-| Docker CLI (dropped) | would have been ~91 MB | ~27 MB |
+Dropped on purpose (install in a child if needed): `xmllint`, `git-extras`, `file`, `7zip`, `gpg`/`gnupg`, `expect`/Tcl. `rsync` stays (C binary; no Python / `rrsync`).
 
 `docker images` is uncompressed. Hub pull is gzip layers (smaller). Oh My Zsh + p10k clones are in both 1.0.5 and 2.0.0.
 
-Exact Hub bytes for **v2.0.0** appear after the first tagged push. Until then the table is measured from Ubuntu 24.04 package metadata + Hub v1.0.5.
+Exact Hub bytes for **v2.0.0** appear after the first tagged push.
 
 ---
 
@@ -254,12 +249,17 @@ docker compose exec app dockerzsh --help
 The full dump is long on purpose (what each tool does, typical invocation, image caveats). Filter by **section**:
 
 ```bash
-dockerzsh --sections            # list ids
+dockerzsh --sections | -s       # list ids
 dockerzsh --shells              # one section
 dockerzsh shells                # same (flag or bare id)
 dockerzsh --section shells      # same
 dockerzsh shells network        # several sections
-dockerzsh --version             # VERSION + zsh --version
+dockerzsh --version | -v        # image identity (ZSH_IMAGE_VERSION)
+dockerzsh --list | -l           # tool names from the catalogue
+dockerzsh --list --version | -l -v
+                                # probe every catalogue tool now
+dockerzsh shells --version | shells -v
+dockerzsh eza --version | eza -v
 ```
 
 | Id | Section |
@@ -269,7 +269,7 @@ dockerzsh --version             # VERSION + zsh --version
 | `shells` | `zsh` / `bash` / `sh` |
 | `listing` | `eza`, `bat`, `fd`, `rg`, `nnn`, `ncdu`, `duf`, … |
 | `edit` | `nano`, `vi`, `jq`, `jo`, `sqlite3`, … |
-| `archives` | zip/tar/7z, `extract`, `dos2unix`, … |
+| `archives` | zip/tar/`extract`, `dos2unix`, … |
 | `network` | `curl`, `ssh`/`scp`/`sftp`, `dig`, `socat`, … |
 | `system` | `git`, `htop`, `tmux`, `sudo`, … |
 | `extras` | `fzf`, `zoxide`, `colordiff`, `patch` |

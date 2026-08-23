@@ -12,6 +12,11 @@ if [ -z "${LC_ALL:-}" ]; then
   export LC_ALL
 fi
 
+# Child images may overwrite VERSION. Keep the zsh tag if Docker ENV survived.
+if [ -n "${ZSH_IMAGE_VERSION:-}" ]; then
+  export ZSH_IMAGE_VERSION
+fi
+
 if [ -x /usr/local/bin/apply-sudo-password-on-boot.sh ]; then
   /usr/local/bin/apply-sudo-password-on-boot.sh || true
 fi

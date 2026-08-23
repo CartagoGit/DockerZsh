@@ -16,7 +16,7 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # oh-my-zsh.sh llame a compinit. No llamar compinit a mano.
 fpath+=("${ZSH_CUSTOM:-$ZSH/custom}/plugins/zsh-completions/src")
 
-# fasd no se instala (binario ausente). extract usa tar/unzip/7z/zstd
+# fasd no se instala (binario ausente). extract usa tar/unzip/zstd
 # de la imagen. sudo: ESC ESC antepone sudo. git/vscode/jsontools/zsh-bat
 # y los tres zsh-users sí.
 plugins=(git vscode extract sudo zsh-autosuggestions zsh-completions zsh-syntax-highlighting jsontools zsh-bat)
@@ -27,7 +27,8 @@ source "$ZSH/oh-my-zsh.sh"
 # EZA_COLORS es el nombre actual; EXA_COLORS se deja por compat.
 alias ls='eza --icons --group-directories-first --color=always'
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
-# fzf: Ctrl-R history, Ctrl-T files, Alt-C cd (if the examples are not gzipped).
+# fzf: Ctrl-R history, Ctrl-T files, Alt-C cd.
+# Ubuntu 24.04 ships these uncompressed under /usr/share/doc/fzf/examples/.
 for _fzf_kb in \
   /usr/share/doc/fzf/examples/key-bindings.zsh \
   /usr/share/fzf/key-bindings.zsh \

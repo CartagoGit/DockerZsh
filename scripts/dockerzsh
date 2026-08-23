@@ -56,8 +56,15 @@ Usage
 
   dockerzsh                 Same as --help (this catalogue)
   dockerzsh --help | -h     This text
-  dockerzsh --version | -v  Image VERSION + zsh --version
-  dockerzsh --sections      List section ids
+  dockerzsh --version | -v  Image identity only (ZSH_IMAGE_VERSION)
+  dockerzsh --list | -l     Tool names from the catalogue (discovered, not hardcoded)
+  dockerzsh --list --version | -l -v
+                            Probe every catalogue tool now
+  dockerzsh shells --version | shells -v
+                            Tools in one section (any section id)
+  dockerzsh eza --version | eza -v
+                            One tool (PATH + --version / -V / dpkg)
+  dockerzsh --sections | -s List section ids
   dockerzsh --shells        One section (also: dockerzsh shells)
   dockerzsh shells network  Several sections
 
@@ -125,12 +132,6 @@ Listing / viewing (upgrades of ls / cat / find / grep)
   less
       Pager. git log / git diff use this. q to quit.
 
-  file
-      Identify a file from its bytes (libmagic). Useful when a bind
-      mount has no extension.
-
-      file /usr/bin/zsh
-
   tree
       Print a directory tree. eza --tree is the colour alternative.
 
@@ -166,11 +167,6 @@ Edit / data
 
       jo name=app version=1.0
 
-  xmllint
-      Parse / pretty-print XML (libxml2-utils).
-
-      xmllint --format file.xml
-
   sqlite3
       Command-line SQLite. Open a .db and run SQL.
 
@@ -200,14 +196,11 @@ Archives / text conversion
       Extra compressors. pigz is parallel gzip. cpio for initramfs /
       rpm-style archives.
 
-  7z
-      7-Zip (7zip package). .7z and several other formats.
-
   cabextract
       Extract .cab (Windows cabinet) files.
 
   extract / x
-      Oh My Zsh helper: picks unzip/tar/7z/… from the file extension.
+      Oh My Zsh helper: picks unzip/tar/zstd/… from the file extension.
 
       extract archive.tar.xz
 
@@ -346,12 +339,6 @@ System / git / process
       GIT_FROM_HOST_VERBOSE=1 to see the path. You do not need to
       call this yourself.
 
-  git-extras
-      Extra git subcommands: git-summary, git-ignore, git-info, …
-
-  gpg
-      GnuPG: verify signatures, git commit signing.
-
   make
       GNU make. There is no gcc/g++ in this image — Makefiles that
       only run scripts/docker are fine; compiling C needs a child image.
@@ -405,9 +392,6 @@ System / git / process
   rlwrap
       Readline wrapper for CLIs that have no line editing.
 
-  expect
-      Automate interactive programs (password prompts, etc.).
-
   keychain
       ssh-agent helper: reuse an agent across shells.
 
@@ -429,8 +413,9 @@ Extras (fuzzy find, cd, diffs)
   fzf
       Fuzzy finder. Interactive zsh sources
       /usr/share/doc/fzf/examples/key-bindings.zsh and completion.zsh
-      (uncompressed on Ubuntu 24.04). Ctrl-R history, Ctrl-T files,
-      Alt-C cd. The binary also works as a pipe filter in any shell.
+      (kept despite Ubuntu's Docker dpkg doc-exclude). Ctrl-R history,
+      Ctrl-T files, Alt-C cd. The binary also works as a pipe filter
+      in any shell.
 
       fd | fzf
       git log --oneline | fzf
@@ -513,22 +498,137 @@ Without a Nerd Font you get boxes on the prompt / ls icons. That is
 not an image bug.
 
 Not in this image (use a child image): gcc/g++/python3, neovim, git-lfs,
-rclone, locales, man-db, nmap. No sshd. No Docker (dockerd / docker
-CLI) — install that in a child if you need it. tcpdump/iperf3
-often need extra Linux capabilities (NET_RAW / NET_ADMIN / host network).
+rclone, locales, man-db, nmap, file, 7zip, xmllint, git-extras, gpg,
+expect/tcl. No sshd. No Docker (dockerd / docker CLI) — install that
+in a child if you need it. tcpdump/iperf3 often need extra Linux
+capabilities (NET_RAW / NET_ADMIN / host network).
 
 Size (order of magnitude, amd64): ubuntu:24.04 ~78 MB disk / ~28 MB Hub.
-Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. This tree (v2.0.0) is about
-+45-55 MB on Hub for the daily CLI extras (~123 MB uncompressed with
-deps; libicu74 from xmllint is the fat one). docker images = disk;
+Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. docker images = disk;
 Hub pull = gzip layers.
 EOF
 }
 
 version() {
-  # Child images may overwrite ENV VERSION. ZSH_IMAGE_VERSION is the zsh tag.
+  # Image identity only. Tool versions: dockerzsh list --version
   echo "cartagodocker/zsh  VERSION=${ZSH_IMAGE_VERSION:-${VERSION:-}}  SHELL=${SHELL:-/usr/bin/zsh}  LANG=${LANG:-}"
-  command -v zsh >/dev/null && zsh --version || true
+}
+
+# Tool names come from catalogue headings (the `  eza` / `  unzip / zip`
+# lines). Adding a package to the Dockerfile + a heading here is enough;
+# this probe list is not maintained by hand.
+extract_tools() {
+  want=${1:-}
+  catalogue | awk -v want="$want" '
+    BEGIN {
+      skip["about"] = 1
+      skip["usage"] = 1
+      skip["helpers"] = 1
+      skip["fonts"] = 1
+      # Oh My Zsh functions, not PATH binaries.
+      skipcmd["extract"] = 1
+      skipcmd["x"] = 1
+    }
+    /^##id:/ {
+      cur = substr($0, 6)
+      next
+    }
+    cur == "" { next }
+    cur in skip { next }
+    want != "" && cur != want { next }
+    /^  [A-Za-z0-9]/ {
+      line = $0
+      sub(/^  /, "", line)
+      gsub(/\([^)]*\)/, "", line)
+      n = split(line, parts, "/")
+      for (i = 1; i <= n; i++) {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", parts[i])
+        split(parts[i], w, /[[:space:]]+/)
+        cmd = w[1]
+        if (cmd ~ /^[A-Za-z0-9][A-Za-z0-9._+-]*$/ && !(cmd in skipcmd) && !seen[cmd]++) {
+          print cmd
+        }
+      }
+    }
+  '
+}
+
+is_section_id() {
+  case "$1" in
+    about|usage|shells|listing|edit|archives|network|system|extras|helpers|fonts)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+probe_cmd() {
+  _cmd=$1
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 1 "$_cmd" "$@" 2>&1 || true
+  else
+    "$_cmd" "$@" 2>&1 || true
+  fi
+}
+
+print_tool_version() {
+  name=$1
+  if ! command -v "$name" >/dev/null 2>&1; then
+    printf '  %-14s  (not on PATH)\n' "$name"
+    return 0
+  fi
+  text=
+  for try in --version -V version; do
+    line=$(probe_cmd "$name" "$try" | grep -v '^$' | head -n 1 | tr -d '\r')
+    case "$line" in
+      *[0-9]*)
+        text=$line
+        break
+        ;;
+    esac
+  done
+  if [ -z "$text" ]; then
+    bin=$(command -v "$name")
+    real=$(readlink -f "$bin" 2>/dev/null || printf '%s' "$bin")
+    pkg=$(dpkg-query -S "$real" 2>/dev/null | head -n 1 | cut -d: -f1)
+    if [ -n "$pkg" ]; then
+      ver=$(dpkg-query -W -f '${Version}' "$pkg" 2>/dev/null || true)
+      if [ -n "$ver" ]; then
+        text="$pkg ${ver}"
+      fi
+    fi
+  fi
+  if [ -z "$text" ]; then
+    text='(no --version)'
+  fi
+  printf '  %-14s  %s\n' "$name" "$text"
+}
+
+show_tool_versions() {
+  if [ $# -eq 0 ]; then
+    extract_tools | while IFS= read -r n; do
+      print_tool_version "$n"
+    done
+    return 0
+  fi
+  for raw in "$@"; do
+    id=$(normalize_id "$raw")
+    if [ "$id" = "list" ]; then
+      extract_tools | while IFS= read -r n; do
+        print_tool_version "$n"
+      done
+    elif is_section_id "$id"; then
+      echo "${id}:"
+      extract_tools "$id" | while IFS= read -r n; do
+        print_tool_version "$n"
+      done
+    else
+      print_tool_version "$raw"
+    fi
+  done
 }
 
 # Markers ##id:<name> sit on their own line before each section title.
@@ -542,13 +642,14 @@ normalize_id() {
   case "$id" in
     help|h) id=help ;;
     version|v) id=version ;;
-    sections) id=sections ;;
+    sections|s) id=sections ;;
     section) id=section ;;
-    ls|list|view|viewing) id=listing ;;
+    ls|view|viewing) id=listing ;;
+    list|l|tools) id=list ;;
     data) id=edit ;;
     archive) id=archives ;;
-    net|ssh) id=network ;;
-    git|process) id=system ;;
+    net) id=network ;;
+    process) id=system ;;
     extra) id=extras ;;
     helper) id=helpers ;;
     font|locale|missing) id=fonts ;;
@@ -597,8 +698,9 @@ show_sections() {
 
 unknown_section() {
   echo "dockerzsh: unknown section: $1" >&2
-  echo "Try: dockerzsh --sections" >&2
-  echo "     dockerzsh --help" >&2
+  echo "Try: dockerzsh --sections | -s" >&2
+  echo "     dockerzsh --help | -h" >&2
+  echo "     dockerzsh --list --version | -l -v" >&2
   exit 2
 }
 
@@ -608,19 +710,47 @@ if [ $# -eq 0 ]; then
   exit 0
 fi
 
+# --version / -v as the first token is image identity, not a tool probe.
 cmd=$(normalize_id "$1")
+if [ "$cmd" = "version" ]; then
+  version
+  exit 0
+fi
+if [ "$cmd" = "help" ]; then
+  catalogue | strip_ids
+  exit 0
+fi
+if [ "$cmd" = "sections" ]; then
+  echo "dockerzsh sections (dockerzsh --shells, dockerzsh shells, dockerzsh --section shells, dockerzsh -s):"
+  list_sections
+  exit 0
+fi
+
+want_tool_ver=0
+filtered=
+for raw in "$@"; do
+  nid=$(normalize_id "$raw")
+  if [ "$nid" = "version" ]; then
+    want_tool_ver=1
+  else
+    filtered="${filtered}${filtered:+ }${raw}"
+  fi
+done
+
+if [ "$want_tool_ver" = 1 ]; then
+  # shellcheck disable=SC2086
+  set -- $filtered
+  show_tool_versions "$@"
+  exit 0
+fi
+
+if [ "$cmd" = "list" ]; then
+  extract_tools
+  exit 0
+fi
+
 shift
 case "$cmd" in
-  help)
-    catalogue | strip_ids
-    ;;
-  version)
-    version
-    ;;
-  sections)
-    echo "dockerzsh sections (dockerzsh --shells, dockerzsh shells, dockerzsh --section shells):"
-    list_sections
-    ;;
   section)
     if [ $# -eq 0 ]; then
       echo "dockerzsh: --section needs an id (try: dockerzsh --sections)" >&2

@@ -41,24 +41,26 @@ COPY scripts/ ${SCRIPTS_HOME}/
 #   7. sudo NOPASSWD (ALL, no %sudo): uid 1000 escribe globales con sudo,
 #      no con 777 en .zshrc. Optional password via SUDO_PASSWORD / sudo-password.
 #   8. LANG=C.UTF-8: eza/p10k/emoji necesitan UTF-8 (POSIX trunca iconos).
-#   9. CLI extras: daily-driver kit for any uid / any host. No gcc, no
-#      python, no locales, no man-db, no git-lfs/rclone/neovim (those
-#      belong in child images). Extra layer vs previous extras ~34 MB.
+#   9. CLI extras: daily-driver kit. No gcc, no python, no locales,
+#      no man-db, no git-lfs/rclone/neovim, no 7zip/file/xmllint/
+#      git-extras/gpg/expect (those belong in child images).
 #  10. No Docker inside the image (no docker-ce-cli, no dockerd).
 #      Use docker on the host. A child image can apt-install a client
 #      if it really needs one.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
+      > /etc/dpkg/dpkg.cfg.d/keep-fzf-examples \
+    && apt-get update && apt-get install -y --no-install-recommends \
         curl wget git openssh-client zsh bat eza ca-certificates sudo \
-        less file nano vim-tiny tree patch fd-find ripgrep fzf zoxide \
-        unzip zip xz-utils bzip2 zstd lz4 pigz cpio 7zip cabextract \
-        jq jo libxml2-utils sqlite3 \
+        less nano vim-tiny tree patch fd-find ripgrep fzf zoxide \
+        unzip zip xz-utils bzip2 zstd lz4 pigz cpio cabextract \
+        jq jo sqlite3 \
         iputils-ping iputils-tracepath fping bind9-dnsutils rsync \
         netcat-openbsd socat traceroute mtr-tiny whois iproute2 openssl \
         tcpdump apache2-utils iperf3 \
         psmisc lsof htop ncdu duf tzdata bsdextrautils moreutils pv bc \
         uuid-runtime acl libcap2-bin inotify-tools entr \
-        gnupg gettext-base make strace xxd uchardet dos2unix colordiff expect \
-        progress keychain rlwrap tig git-extras tmux nnn \
+        gettext-base make strace xxd uchardet dos2unix colordiff \
+        progress keychain rlwrap tig tmux nnn \
     && for script in ${SCRIPTS_HOME}/*.zsh; do \
          if [ -f "$script" ]; then \
            mv "$script" "${script%.zsh}"; \
