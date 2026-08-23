@@ -25,6 +25,7 @@ source "$ZSH/oh-my-zsh.sh"
 # eza (fork activo de exa, abandonado). ls con iconos/colores.
 # EZA_COLORS es el nombre actual; EXA_COLORS se deja por compat.
 alias ls='eza --icons --group-directories-first --color=always'
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 export EZA_COLORS="uu=36:gu=37:sn=32:sb=32:da=34:ur=34:uw=35:ux=36:ue=36:gr=34:gw=35:gx=36:tr=34:tw=35:tx=36"
 export EXA_COLORS="$EZA_COLORS"
 export TERM="${TERM:-xterm-256color}"

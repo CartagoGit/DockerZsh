@@ -38,7 +38,9 @@ jobs:
 
             - name: Build Docker image
               run: |
-                  docker build -t "${{ env.IMAGE_TAG }}" -t "${{ env.IMAGE_LATEST }}" .
+                  VERSION="${VERSION_TAG#v}"
+                  docker build --build-arg "VERSION=${VERSION}" \
+                    -t "${{ env.IMAGE_TAG }}" -t "${{ env.IMAGE_LATEST }}" .
 
             - name: Push Docker image
               run: |

@@ -1,0 +1,96 @@
+#!/bin/sh
+# Catalogue of what cartagodocker/zsh ships. English on purpose:
+# this is the image's own --help, not a host docker CLI.
+set -eu
+
+usage() {
+  cat <<'EOF'
+cartagodocker/zsh — Ubuntu 24.04 LTS + zsh + Oh My Zsh + Powerlevel10k.
+
+A base image: same .zshrc / .p10k.zsh / Oh My Zsh for root, uid 1000, and
+new users (/etc/skel) via /usr/share/globally. No ENTRYPOINT — CMD is zsh.
+Compose keep-alive (tail -f /dev/null) is not a shell; attach with
+  docker compose exec <svc> zsh
+to get eza, bat, and the prompt.
+
+Usage:
+  dockerzsh
+  dockerzsh --help | -h
+  dockerzsh --version | -v
+
+EOF
+  tools
+}
+
+tools() {
+  cat <<'EOF'
+--- shells ---
+  zsh           Default interactive shell (Oh My Zsh + Powerlevel10k)
+  bash          GNU bash (docker run IMAGE bash, or type bash inside zsh)
+  sh            POSIX sh (dash on Ubuntu)
+
+--- listing / viewing (upgrades of ls / cat / find / grep) ---
+  eza           Modern ls (icons, git, colours). Aliased as: ls
+  bat           Syntax-highlighting cat (Debian name batcat). /usr/local/bin/bat
+  fd            Fast find (Debian name fdfind). GNU find stays as: find
+  rg            ripgrep — fast recursive grep
+  less          Pager (git log / git diff use this)
+  file          Identify a file from its bytes (libmagic database)
+  tree          Directory tree
+
+--- edit / JSON / archives ---
+  nano          Small terminal editor (Ctrl+O save, Ctrl+X quit)
+  jq            JSON query/pretty-print
+  unzip / zip   Extract / create zip archives
+  xz / bzip2    .xz and .bz2 compression (tar and gzip are already in Ubuntu)
+  patch         Apply unified diffs
+  sqlite3       Command-line SQLite
+  hexdump       Dump file bytes (bsdextrautils; also: column)
+
+--- network / system ---
+  curl / wget   HTTP(S) download
+  git           Version control
+  ssh           OpenSSH client (no sshd server)
+  ping          ICMP ping (iputils-ping)
+  dig/nslookup  DNS lookup (bind9-dnsutils)
+  rsync         Copy trees over ssh or locally
+  nc            netcat (netcat-openbsd) — TCP/UDP swiss army knife
+  traceroute    Trace IP path
+  htop          Interactive process viewer (top is already in Ubuntu)
+  lsof          List open files / sockets
+  killall       Kill by name (psmisc; also: pstree, fuser)
+  sudo          Passwordless by default. sudo-password / sudo-nopasswd to toggle
+
+--- extras ---
+  fzf           Fuzzy finder (Ctrl+R history if key-bindings loaded)
+  zoxide        Smarter cd; command: z  (learns directories you visit)
+  duf           df with colours (disk usage)
+
+--- image helpers (this image) ---
+  add_text_to_zshrc     Append/prepend text to the shared .zshrc
+  add_text_to_p10k      Same for .p10k.zsh
+  share_config_globally Publish a file/dir from /root to every user
+  sudo-password         Require a sudo password (runtime; not baked in)
+  sudo-nopasswd         Restore passwordless sudo
+  dockerzsh             This catalogue
+
+Locale: LANG=C.UTF-8. HTTPS: ca-certificates is installed.
+Prompt whale 🐳 needs an emoji font on the HOST. Powerline / eza icons
+need a Nerd Font on the HOST (Cascadia Code NF / CaskaydiaCove).
+EOF
+}
+
+version() {
+  echo "cartagodocker/zsh  VERSION=${VERSION:-}  SHELL=${SHELL:-/usr/bin/zsh}  LANG=${LANG:-}"
+  command -v zsh >/dev/null && zsh --version || true
+}
+
+case "${1:-}" in
+  -h|--help|"") usage ;;
+  -v|--version) version ;;
+  *)
+    echo "dockerzsh: unknown option: $1" >&2
+    echo "Try: dockerzsh --help" >&2
+    exit 2
+    ;;
+esac

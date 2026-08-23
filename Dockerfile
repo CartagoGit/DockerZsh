@@ -1,6 +1,8 @@
 # Base Ubuntu LTS. Pinneada al tag 24.04 (no latest).
+# Tag de esta imagen: v1.0.6 (Hub sigue en v1.0.5 hasta git tag + push).
 FROM ubuntu:24.04
 
+ARG VERSION=1.0.6
 ARG ROOT_HOME=/root
 ARG SCRIPTS_HOME=/usr/local/bin
 
@@ -35,8 +37,15 @@ COPY scripts/ ${SCRIPTS_HOME}/
 #   7. sudo NOPASSWD (ALL, no %sudo): uid 1000 escribe globales con sudo,
 #      no con 777 en .zshrc. Optional password via SUDO_PASSWORD / sudo-password.
 #   8. LANG=C.UTF-8: eza/p10k/emoji necesitan UTF-8 (POSIX trunca iconos).
+#   9. CLI extras (budget < ~50 MB installed, file/libmagic ~8 MB):
+#      less file unzip jq zip xz bzip2 ping tree patch nano fd rg duf
+#      fzf zoxide tzdata dig rsync psmisc lsof nc htop sqlite3 traceroute
+#      bsdextrautils (hexdump, column). GNU find stays. No gcc/python/locales.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl wget git openssh-client zsh bat eza ca-certificates sudo \
+        less file unzip jq xz-utils zip bzip2 iputils-ping tree patch nano \
+        fd-find ripgrep duf fzf zoxide tzdata bind9-dnsutils rsync \
+        psmisc lsof netcat-openbsd htop sqlite3 traceroute bsdextrautils \
     && for script in ${SCRIPTS_HOME}/*.zsh; do \
          if [ -f "$script" ]; then \
            mv "$script" "${script%.zsh}"; \
@@ -50,6 +59,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
                   ${SCRIPTS_HOME}/sudo-nopasswd \
                   ${SCRIPTS_HOME}/apply-sudo-password-on-boot.sh \
                   ${SCRIPTS_HOME}/zsh-profile.sh \
+                  ${SCRIPTS_HOME}/dockerzsh \
     && clone_pinned() { \
          _url="$1"; _dest="$2"; _sha="$3"; \
          mkdir -p "$_dest"; \
@@ -68,6 +78,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && share_config_globally .p10k.zsh --to globally/.p10k.zsh --permissions 644 \
     && share_config_globally .zshrc --to globally/.zshrc --permissions 644 \
     && ln -sfn /usr/bin/batcat /usr/local/bin/bat \
+    && ln -sfn /usr/bin/fdfind /usr/local/bin/fd \
     && chsh -s /usr/bin/zsh root \
     && if getent passwd ubuntu >/dev/null 2>&1; then chsh -s /usr/bin/zsh ubuntu; fi \
     && ${SCRIPTS_HOME}/enable-sudo-users.sh \
@@ -80,7 +91,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # y $(...). zsh -c se parte o se traga errores. El usuario interactivo
 # entra por CMD zsh, no por SHELL ni ENTRYPOINT.
 # Sin ENTRYPOINT: `docker run imagen bash` lanza bash, no "can't open input file".
-ENV SHELL=/usr/bin/zsh \
+ENV VERSION=${VERSION} \
+    SHELL=/usr/bin/zsh \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 SHELL ["/bin/sh", "-c"]
