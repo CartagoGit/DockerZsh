@@ -60,17 +60,35 @@ Inside a running container the same inventory is `dockerzsh --help` (filter with
 | Tool | What | Docs |
 |---|---|---|
 | `zsh` | Default interactive shell. Oh My Zsh + Powerlevel10k. This is `CMD`. | [zsh](https://zsh.sourceforge.io/Doc/) · [Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh) · [p10k](https://github.com/romkatv/powerlevel10k) |
-| `bash` | GNU bash. `docker run IMAGE bash` or type `bash` inside zsh. | [manual](https://www.gnu.org/software/bash/manual/) |
-| `sh` | POSIX sh (dash on Ubuntu). | [dash](https://manpages.ubuntu.com/manpages/noble/en/man1/dash.1.html) |
+| `bash` | GNU bash. `docker run IMAGE bash` or type `bash` inside zsh. Interactive: `ls` → eza, `cat` → bat, zoxide, fzf keys, Tab, **ble.sh** ghost-text, green/red `❯`. | [manual](https://www.gnu.org/software/bash/manual/) · [ble.sh](https://github.com/akinomyoga/ble.sh) |
+| `sh` | POSIX sh (dash on Ubuntu). Interactive: `ls` → eza, zoxide (no fzf keys). `sh -c` stays POSIX. | [dash](https://manpages.ubuntu.com/manpages/noble/en/man1/dash.1.html) |
 
-Oh My Zsh plugins in the image: `git`, `extract` (`extract` / `x`), `sudo`, `zsh-autosuggestions`, `zsh-completions`, `zsh-syntax-highlighting`, `zsh-bat`.
+Interactive zsh only (not bash/sh). Tab stays native completion. p10k and zoxide are unchanged. Catalogue: `dockerzsh --plugins`.
+
+| Plugin | What | Docs |
+|---|---|---|
+| `git` | Aliases `gst`, `gco`, `gd`, `gl`, `gp`, `gcb`, … | [git](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git) |
+| `extract` / `x` | Unzip/tar/zstd from the file extension | [extract](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/extract) |
+| `sudo` | ESC ESC prefixes `sudo` | [sudo](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/sudo) |
+| `jsontools` | `pp_json`, `is_json`, `urlencode_json` — OMZ needs node/python/ruby; this base uses `jq` | [jsontools](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/jsontools) |
+| `zsh-autosuggestions` | Ghost text (history, then completion) | [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions) |
+| `zsh-completions` | Extra `fpath` before `compinit` | [zsh-completions](https://github.com/zsh-users/zsh-completions) |
+| `zsh-syntax-highlighting` | Green/red as you type | [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) |
+| `zsh-history-substring-search` | Up/Down match the typed prefix (Ctrl-R is still fzf) | [history-substring-search](https://github.com/zsh-users/zsh-history-substring-search) |
+| `you-should-use` | Reminds you of `gst` when you type `git status` | [you-should-use](https://github.com/MichaelAquilina/zsh-you-should-use) |
+| `safe-paste` | Multi-line paste waits for Enter | [safe-paste](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/safe-paste) |
+| `fancy-ctrl-z` | Ctrl-Z toggles a stopped editor | [fancy-ctrl-z](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/fancy-ctrl-z) |
+| `dirhistory` | Alt-Left / Alt-Right walk directories (complements `z`) | [dirhistory](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/dirhistory) |
+| `zsh-bat` | `cat` → `bat` in zsh (bash/sh get the same alias from `interactive.sh`) | [zsh-bat](https://github.com/fdellwing/zsh-bat) |
+
+Not loaded: `vscode` (no `code` in the image), `fasd` (no binary), `fzf-tab` / `zsh-autocomplete` (would steal Tab).
 
 ### Listing / viewing
 
 | Tool | What | Docs |
 |---|---|---|
-| `eza` | Modern `ls` (colours, git, icons). Aliased as `ls` in interactive zsh. GNU `ls` stays `/usr/bin/ls`. | [eza](https://github.com/eza-community/eza) |
-| `bat` | Syntax-highlighting `cat`. Debian name is `batcat`; `/usr/local/bin/bat` → `batcat`. | [bat](https://github.com/sharkdp/bat) |
+| `eza` | Modern `ls` (colours, git, icons). Aliased as `ls` in interactive zsh, bash, and sh. GNU `ls` stays `/usr/bin/ls` (scripts / `sh -c`). | [eza](https://github.com/eza-community/eza) |
+| `bat` | Syntax-highlighting `cat`. Debian name is `batcat`; `/usr/local/bin/bat` → `batcat`. Interactive shells alias `cat` → `bat --paging=never` (`rcat` is GNU cat). | [bat](https://github.com/sharkdp/bat) |
 | `fd` | Fast `find` (Debian name `fdfind`). GNU `find` stays `find`. | [fd](https://github.com/sharkdp/fd) |
 | `rg` | Fast recursive grep (ripgrep). Honours `.gitignore`. | [ripgrep](https://github.com/BurntSushi/ripgrep) |
 | `less` | Pager (`git log` / `git diff`). `q` to quit. | [less](https://www.greenwoodsoftware.com/less/) |
@@ -156,8 +174,8 @@ Oh My Zsh plugins in the image: `git`, `extract` (`extract` / `x`), `sudo`, `zsh
 
 | Tool | What | Docs |
 |---|---|---|
-| `fzf` | Fuzzy finder. Interactive zsh: Ctrl-R / Ctrl-T / Alt-C. Also a pipe filter. | [fzf](https://github.com/junegunn/fzf) |
-| `zoxide` | Smarter `cd`; command is `z`. | [zoxide](https://github.com/ajeetdsouza/zoxide) |
+| `fzf` | Fuzzy finder. Interactive zsh and bash: Ctrl-R (history) / Ctrl-T / Alt-C. Tab stays native completion (not fzf). Also a pipe filter. dash has no fzf keys. | [fzf](https://github.com/junegunn/fzf) |
+| `zoxide` | Smarter `cd`; command is `z`. Interactive zsh / bash / sh run `zoxide init`. | [zoxide](https://github.com/ajeetdsouza/zoxide) |
 | `colordiff` | Colourful `diff`. | [colordiff](https://www.colordiff.org/) |
 | `patch` | Apply unified diffs. | [patch](https://www.gnu.org/software/diffutils/manual/html_node/Invoking-patch.html) |
 
@@ -215,7 +233,9 @@ docker exec -it <container> zsh
 the first prompt does not fetch it). Starting in `/` shows a lock icon
 (`DIR_SHOW_WRITABLE`) because `/` is not writable for uid 1000 — use
 `-w /home/ubuntu` or bind your project. Inside zsh you can still
-`bash`, `sh`, `exit`.
+`bash`, `sh`, `exit`. Interactive **bash** and **sh** also alias
+`ls` → eza (and load zoxide; bash also gets fzf keys). They do **not**
+get p10k. `sh -c` / Dockerfile `RUN` do not load aliases.
 
 ### 🧊 Keep-alive (Compose)
 
@@ -229,7 +249,7 @@ services:
     user: "1000:1000"
 ```
 
-That process is **`tail`, not zsh**, and **not a TTY**. No prompt, no eza aliases, no p10k. Attach when you want the shell:
+That process is **`tail`, not a shell**, and **not a TTY**. No prompt, no eza aliases, no p10k. Attach when you want the shell:
 
 ```bash
 docker compose exec app zsh     # prompt + eza + bat + p10k
@@ -413,6 +433,7 @@ The full dump is long on purpose (what each tool does, typical invocation, image
 ```bash
 dockerzsh --sections | -s       # list ids
 dockerzsh --shells              # one section
+dockerzsh --plugins             # Oh My Zsh plugins (interactive zsh)
 dockerzsh shells                # same (flag or bare id)
 dockerzsh --section shells      # same
 dockerzsh shells network        # several sections
@@ -429,6 +450,7 @@ dockerzsh eza --version | eza -v
 | `about` | What this image is (CMD, no ENTRYPOINT, TTY vs keep-alive) |
 | `usage` | How to invoke `dockerzsh` |
 | `shells` | `zsh`, `bash`, `sh` |
+| `plugins` | Oh My Zsh plugins (interactive zsh only) — [Utilities](#utilities) |
 | `listing` | `eza`, `bat`, `fd`, `rg`, `less`, `tree`, `nnn`, `ncdu`, `duf` |
 | `edit` | `nano`, `vi`, `jq`, `jo`, `sqlite3`, `hexdump`/`xxd`, `bc`, `column` |
 | `archives` | `unzip`/`zip`, `tar`/`gzip`, `xz`, `bzip2`, `zstd`, `lz4`, `pigz`, `cpio`, `cabextract`, `extract`/`x`, `uchardet`, `dos2unix` |

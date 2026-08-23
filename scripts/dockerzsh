@@ -36,11 +36,14 @@ Two different jobs — mixing them looks like "eza is broken":
     docker run --rm -it cartagodocker/zsh
     docker exec -it <container> zsh
     docker compose exec <svc> zsh
+    docker compose exec <svc> bash   # ls→eza, zoxide, fzf (no p10k)
+    docker compose exec <svc> sh     # ls→eza, zoxide (no fzf keys, no p10k)
 
   Keep-alive (Compose)
     command: ["tail", "-f", "/dev/null"]
-    That process is tail, not zsh, and not a TTY. No prompt, no eza
+    That process is tail, not a shell, and not a TTY. No prompt, no
     aliases. Attach later with: docker compose exec <svc> zsh
+    (or bash / sh for a simpler interactive shell)
 
 Build SHELL is ["/bin/sh", "-c"] so child Dockerfiles do not inherit
 zsh -c for RUN. Locale is LANG=C.UTF-8 / LC_ALL=C.UTF-8.
@@ -66,9 +69,10 @@ Usage
                             One tool (PATH + --version / -V / dpkg)
   dockerzsh --sections | -s List section ids
   dockerzsh --shells        One section (also: dockerzsh shells)
+  dockerzsh --plugins       Oh My Zsh plugins (interactive zsh)
   dockerzsh shells network  Several sections
 
-  Section ids: about usage shells listing edit archives
+  Section ids: about usage shells plugins listing edit archives
                network system extras helpers fonts
 
 EOF
@@ -84,17 +88,81 @@ Shells
 
   zsh
       Default interactive shell. Oh My Zsh + Powerlevel10k. This is
-      CMD. Aliases (ls→eza), prompt, and plugins load only in an
-      interactive zsh TTY — not under `tail -f /dev/null`.
+      CMD. Prompt and plugins load only in an interactive zsh TTY —
+      not under `tail -f /dev/null`. Aliases (ls→eza, cat→bat) also
+      load in interactive bash and sh (shared snippet). Tab is native
+      completion. Typing suggests via zsh-autosuggestions (cyan ghost;
+      → or End to accept). Up / Down match the typed prefix
+      (history-substring-search). Ctrl-R is fzf. Plugin list:
+      dockerzsh --plugins. docker --rm history starts empty.
 
   bash
       GNU bash. Use `docker run IMAGE bash`, `docker compose exec svc
-      bash`, or type `bash` inside zsh. Login bash sources
-      /etc/profile.d/zsh-image.sh (UTF-8 + optional SUDO_PASSWORD).
+      bash`, or type `bash` inside zsh. Interactive bash: ls→eza,
+      cat→bat, zoxide, fzf keys, bash-completion (Tab), ble.sh
+      ghost-text (type `ec` → suggests echo), green/red ❯ from the
+      last exit code. Non-interactive `bash -c` does not.
 
   sh
-      POSIX sh (dash on Ubuntu). Use for portable snippets. Login
-      `sh -l` also sources profile.d.
+      POSIX sh (dash on Ubuntu). Use for portable snippets. Interactive
+      `sh` sources $ENV (ls→eza, zoxide). Login `sh -l` also sources
+      profile.d. `sh -c` / Dockerfile RUN stay alias-free.
+
+##id:plugins
+========================================================================
+Oh My Zsh plugins (interactive zsh only)
+========================================================================
+
+  These load from ~/.zshrc. They do not apply to bash, sh, or
+  `docker run IMAGE cmd`. Tab is native completion (not fzf).
+  Powerlevel10k and zoxide are unchanged.
+
+  git
+      Aliases: gst, gco, gd, gl, gp, gcb, …  (Oh My Zsh git plugin)
+
+  extract / x
+      Pick unzip/tar/zstd from the file extension.
+
+  sudo
+      ESC ESC prefixes the current / previous command with sudo.
+
+  jsontools
+      pp_json, is_json, urlencode_json, urldecode_json.
+      OMZ uses node/python3/ruby when present (NodeBun). This base
+      has jq only — same names, jq implementation.
+
+  zsh-autosuggestions
+      Ghost text as you type (history, then completion). → or End
+      accepts. Cyan on p10k.
+
+  zsh-completions
+      Extra completion functions on fpath before compinit.
+
+  zsh-syntax-highlighting
+      Green / red while you type. Loaded before history-substring-search.
+
+  zsh-history-substring-search
+      Up / Down walk history that starts with what you already typed.
+      Ctrl-R is still fzf. Bindings are after fzf key-bindings.
+
+  you-should-use
+      Reminds you of an alias (gst) when you type the long form.
+
+  safe-paste
+      A multi-line paste is not executed until you press Enter.
+
+  fancy-ctrl-z
+      Ctrl-Z backgrounds the editor and brings it back.
+
+  dirhistory
+      Alt-Left / Alt-Right walk the directory stack. Complements z.
+
+  zsh-bat
+      cat → bat in zsh. Interactive bash/sh get the same alias from
+      /usr/share/zsh-image/interactive.sh.
+
+  Not loaded: vscode (no `code` in the image), fasd (no binary),
+  fzf-tab / zsh-autocomplete (would steal Tab).
 
 ##id:listing
 ========================================================================
@@ -103,18 +171,21 @@ Listing / viewing (upgrades of ls / cat / find / grep)
 
   eza
       Modern ls: colours, git status, icons (needs a Nerd Font on the
-      HOST). Aliased as `ls` inside interactive zsh. GNU ls remains
-      `/usr/bin/ls` if you need it.
+      HOST). Aliased as `ls` in interactive zsh, bash, and sh. GNU ls
+      remains `/usr/bin/ls` if you need it (scripts / `sh -c`).
 
       eza -la                  long + hidden
       eza --tree --level=2     tree view
-      ls                       same as eza (zsh alias)
+      ls                       same as eza (interactive alias)
 
   bat
       Syntax-highlighting cat. Debian package name is batcat; this
       image puts /usr/local/bin/bat → batcat so `bat file` works.
+      Interactive zsh/bash/sh alias `cat` → `bat --paging=never`.
+      GNU cat is `rcat` or `/usr/bin/cat`.
 
       bat README.md
+      cat README.md            same colours, no pager
       bat -n Dockerfile        with line numbers
 
   fd
@@ -402,17 +473,18 @@ Extras (fuzzy find, cd, diffs)
 ========================================================================
 
   fzf
-      Fuzzy finder. Interactive zsh sources
-      /usr/share/doc/fzf/examples/key-bindings.zsh and completion.zsh
+      Fuzzy finder. Interactive zsh and bash source Ubuntu's
+      key-bindings + completion under /usr/share/doc/fzf/examples/
       (kept despite Ubuntu's Docker dpkg doc-exclude). Ctrl-R history,
-      Ctrl-T files, Alt-C cd. The binary also works as a pipe filter
-      in any shell.
+      Ctrl-T files, Alt-C cd. dash has no fzf keys. The binary also
+      works as a pipe filter in any shell.
 
       fd | fzf
       git log --oneline | fzf
 
   zoxide
       Smarter cd; command is `z`. Learns directories you visit.
+      Interactive zsh / bash / sh run `zoxide init`.
 
       z dockerzsh              jump to a known path fragment
 
@@ -519,6 +591,7 @@ extract_tools() {
       skip["usage"] = 1
       skip["helpers"] = 1
       skip["fonts"] = 1
+      skip["plugins"] = 1
       # Oh My Zsh functions / image helpers, not versioned PATH binaries.
       skipcmd["extract"] = 1
       skipcmd["x"] = 1
@@ -551,7 +624,7 @@ extract_tools() {
 
 is_section_id() {
   case "$1" in
-    about|usage|shells|listing|edit|archives|network|system|extras|helpers|fonts)
+    about|usage|shells|plugins|listing|edit|archives|network|system|extras|helpers|fonts)
       return 0
       ;;
     *)
@@ -648,6 +721,7 @@ normalize_id() {
     net) id=network ;;
     process) id=system ;;
     extra) id=extras ;;
+    plugin|omz|ohmyzsh) id=plugins ;;
     helper) id=helpers ;;
     font|locale|missing) id=fonts ;;
     image) id=about ;;
@@ -759,7 +833,7 @@ case "$cmd" in
     done
     show_sections "$@"
     ;;
-  about|usage|shells|listing|edit|archives|network|system|extras|helpers|fonts)
+  about|usage|shells|plugins|listing|edit|archives|network|system|extras|helpers|fonts)
     set -- "$cmd" "$@"
     for raw in "$@"; do
       id=$(normalize_id "$raw")

@@ -11,17 +11,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   for that tag already exists, it is deleted and recreated. Hub is
   unchanged: existing Hub tags are skipped (delete them on Hub to
   republish the image).
+- Interactive **bash** and **sh** share zsh’s `ls` → eza, `cat` → bat
+  (`--paging=never`), zoxide, and (bash) fzf keys via
+  `/usr/share/zsh-image/interactive.sh`. Sourced from `.zshrc`,
+  `/etc/profile.d` (when `$-` has `i`), `/etc/bash.bashrc`, and dash
+  `$ENV`. Non-interactive `sh -c` / `bash -c` / Dockerfile `RUN` stay
+  alias-free. No p10k outside zsh.
+- `bash-completion` so Tab lists commands/files in interactive bash
+  (Ubuntu `.bashrc` already sources it; the package was missing).
+- `ZSH_DISABLE_COMPFIX=true` so uid 1000 Tab completion is not skipped
+  on the shared Oh My Zsh tree.
+- fzf **key-bindings** only (Ctrl-R / Ctrl-T / Alt-C). Do not bind Tab
+  to `fzf-completion` — native zsh/bash completion lists matches.
+- zsh-autosuggestions: cyan ghost (`fg=6`; `fg=8`/`244` vanish on
+  p10k). Rebind widgets after p10k/fzf. `strategy=(history completion)`
+  so typing still suggests with an empty docker `--rm` history.
+  History is `INC_APPEND` (Up / Ctrl-R / `history` in this session).
+  Interactive bash: `histappend`, Up prefix-search.
+- Interactive bash: **ble.sh** (ghost-text while typing — same idea as
+  zsh-autosuggestions) and a green/red `❯` from the last exit code.
+  dash stays a POSIX prompt.
+- Oh My Zsh plugins (interactive zsh only): `zsh-history-substring-search`
+  (Up/Down match the typed prefix), `you-should-use` (remind `gst`
+  when you type `git status`), `safe-paste`, `fancy-ctrl-z`,
+  `dirhistory` (Alt-Left / Alt-Right). Catalogue: `dockerzsh --plugins`.
+  Tab stays native completion. p10k and zoxide are unchanged.
 
 ### Changed
 - README “What's in the image” no longer truncates the daily CLI
   (`…`). New **Utilities** section lists every extra binary with a
   docs link; image helpers (`add_text_to_*`, `sudo-password`, …)
   are documented in this README. Catalogue CLI table matches.
+- Dropped Oh My Zsh `vscode` (`vsc` / `code` aliases — no `code` in
+  this image). Document the remaining plugins in README + `dockerzsh`.
+- `jsontools` is a no-op on this base (needs node/python3/ruby). Same
+  names (`pp_json`, `is_json`, `urlencode_json`, `urldecode_json`)
+  are provided with `jq`. A child with node (NodeBun) keeps OMZ’s
+  node implementation.
 
 ### Fixed
 - `dockerzsh eza -v` / `--list --version` treated `eza version` as a
   path (`"version": No such file`). Probe now skips those error
   lines and reads the `v0.18.2` line from `eza --version`.
+- fzf key-bindings only load when stdin is a TTY. Without one,
+  Ubuntu’s `key-bindings.zsh` restores `zle on` and zsh prints
+  `(eval):1: can't change option: zle`. Line editor on
+  `docker run -it` was already fine; `zsh -ic` in a pipe is quiet
+  now. Same TTY guard for bash fzf keys.
 
 ## [2.0.0] - 2026-08-23
 

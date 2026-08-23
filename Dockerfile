@@ -20,6 +20,12 @@ ARG ZSH_SYNTAX_HIGHLIGHTING_URL=https://github.com/zsh-users/zsh-syntax-highligh
 ARG ZSH_SYNTAX_HIGHLIGHTING_SHA=5eb677bb0fa9a3e60f0eff031dc13926e093df92
 ARG ZSH_BAT_URL=https://github.com/fdellwing/zsh-bat.git
 ARG ZSH_BAT_SHA=467337613c1c220c0d01d69b19d2892935f43e9f
+ARG ZSH_HISTORY_SUBSTRING_SEARCH_URL=https://github.com/zsh-users/zsh-history-substring-search.git
+ARG ZSH_HISTORY_SUBSTRING_SEARCH_SHA=14c8d2e0ffaee98f2df9850b19944f32546fdea5
+ARG ZSH_YOU_SHOULD_USE_URL=https://github.com/MichaelAquilina/zsh-you-should-use.git
+ARG ZSH_YOU_SHOULD_USE_SHA=5f3d129864ee4505043d88c3486224f1d75b692e
+ARG BLESH_URL=https://github.com/akinomyoga/ble.sh.git
+ARG BLESH_SHA=63c23e99f1f7133ae57b79f87b16d1f68cd39884
 
 # zsh/p10k to /root (share_config_globally las publica).
 # SSH: known_hosts oficiales + ssh_config.d. Las claves del host se
@@ -51,6 +57,7 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
       > /etc/dpkg/dpkg.cfg.d/keep-fzf-examples \
     && apt-get update && apt-get install -y --no-install-recommends \
         curl wget git openssh-client zsh bat eza ca-certificates sudo \
+        bash-completion \
         less nano vim-tiny tree patch fd-find ripgrep fzf zoxide \
         unzip zip xz-utils bzip2 zstd lz4 pigz cpio cabextract \
         jq jo sqlite3 \
@@ -102,6 +109,14 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
     && clone_pinned ${ZSH_COMPLETIONS_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-completions ${ZSH_COMPLETIONS_SHA} \
     && clone_pinned ${ZSH_SYNTAX_HIGHLIGHTING_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ${ZSH_SYNTAX_HIGHLIGHTING_SHA} \
     && clone_pinned ${ZSH_BAT_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-bat ${ZSH_BAT_SHA} \
+    && clone_pinned ${BLESH_URL} /tmp/blesh ${BLESH_SHA} \
+    && git -C /tmp/blesh submodule update --init --depth 1 \
+    && apt-get install -y --no-install-recommends gawk \
+    && make -C /tmp/blesh install PREFIX=/usr \
+    && apt-get purge -y --auto-remove gawk \
+    && rm -rf /tmp/blesh \
+    && clone_pinned ${ZSH_HISTORY_SUBSTRING_SEARCH_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/zsh-history-substring-search ${ZSH_HISTORY_SUBSTRING_SEARCH_SHA} \
+    && clone_pinned ${ZSH_YOU_SHOULD_USE_URL} ${ROOT_HOME}/.oh-my-zsh/custom/plugins/you-should-use ${ZSH_YOU_SHOULD_USE_SHA} \
     && clone_pinned ${P10K_URL} ${ROOT_HOME}/.oh-my-zsh/themes/powerlevel10k ${P10K_SHA} \
     && share_config_globally .oh-my-zsh --to globally/.oh-my-zsh --base-src /root --permissions 755 \
     && share_config_globally .p10k.zsh --to globally/.p10k.zsh --permissions 644 \
@@ -117,8 +132,18 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
     && chsh -s /usr/bin/zsh root \
     && if getent passwd ubuntu >/dev/null 2>&1; then chsh -s /usr/bin/zsh ubuntu; fi \
     && ${SCRIPTS_HOME}/enable-sudo-users.sh \
+    && install -d -m 0755 /usr/share/zsh-image \
+    && install -m 0644 ${SCRIPTS_HOME}/zsh-interactive.sh /usr/share/zsh-image/interactive.sh \
+    && rm -f ${SCRIPTS_HOME}/zsh-interactive.sh \
+    && : "interactive.sh $(wc -c < /usr/share/zsh-image/interactive.sh) ble-attach" \
     && install -m 0644 ${SCRIPTS_HOME}/zsh-profile.sh /etc/profile.d/zsh-image.sh \
     && if [ -f /etc/bash.bashrc ]; then printf '\n# zsh-image login/non-login bash\n. /etc/profile.d/zsh-image.sh\n' >> /etc/bash.bashrc; fi \
+    && for _brc in /root/.bashrc /home/ubuntu/.bashrc /etc/skel/.bashrc; do \
+         if [ -f "$_brc" ]; then \
+           printf '\n# zsh-image interactive (after Ubuntu ls --color)\n. /usr/share/zsh-image/interactive.sh\n' >> "$_brc"; \
+         fi; \
+       done \
+    && unset _brc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/*
 
@@ -126,6 +151,8 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
 # y $(...). zsh -c se parte o se traga errores. El usuario interactivo
 # entra por CMD zsh, no por SHELL ni ENTRYPOINT.
 # Sin ENTRYPOINT: `docker run imagen bash` lanza bash, no "can't open input file".
+# ENV= is POSIX: interactive dash sources it (`docker run -it IMAGE sh`).
+# Non-interactive `sh -c` / Dockerfile RUN does not.
 # VERSION = this image. Child images (nodebun) often set their own
 # VERSION; ZSH_IMAGE_VERSION stays the zsh tag so dockerzsh --version
 # does not lie after FROM.
@@ -136,6 +163,7 @@ ENV VERSION=${VERSION} \
     LC_ALL=C.UTF-8 \
     TERM=xterm-256color \
     GIT_SSH_COMMAND=/usr/local/bin/ssh \
-    GITSTATUS_CACHE_DIR=/usr/share/gitstatus
+    GITSTATUS_CACHE_DIR=/usr/share/gitstatus \
+    ENV=/usr/share/zsh-image/interactive.sh
 SHELL ["/bin/sh", "-c"]
 CMD ["/usr/bin/zsh"]

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Login/non-login POSIX profile: UTF-8 + optional sudo password on boot.
 # Installed as /etc/profile.d/zsh-image.sh (sourced by login bash/sh).
+# Interactive bash also sources this from /etc/bash.bashrc.
 # zshrc also calls apply-sudo-password-on-boot.sh for interactive zsh.
 
 if [ -z "${LANG:-}" ] || [ "${LANG}" = "C" ] || [ "${LANG}" = "POSIX" ]; then
@@ -47,3 +48,14 @@ if [ -r "$_git_env" ]; then
   . "$_git_env"
 fi
 unset _git_env
+
+# Aliases / zoxide / fzf: interactive shells only. sh -c and Dockerfile
+# RUN do not have i in $-, so `ls` stays GNU ls in scripts.
+case $- in
+  *i*)
+    if [ -r /usr/share/zsh-image/interactive.sh ]; then
+      # shellcheck disable=SC1091
+      . /usr/share/zsh-image/interactive.sh
+    fi
+    ;;
+esac
