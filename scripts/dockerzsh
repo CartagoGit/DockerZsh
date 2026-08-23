@@ -577,14 +577,15 @@ print_tool_version() {
     return 0
   fi
   text=
+  # Scan every line: eza --version prints the tag on line 2, and
+  # `eza version` is a path (not a flag). Skip error lines that
+  # happen to contain a digit.
   for try in --version -V version; do
-    line=$(probe_cmd "$name" "$try" | grep -v '^$' | head -n 1 | tr -d '\r')
-    case "$line" in
-      *[0-9]*)
-        text=$line
-        break
-        ;;
-    esac
+    line=$(probe_cmd "$name" "$try" | tr -d '\r' | grep -v '^$' | grep '[0-9]' | grep -viE 'no such file|unknown option|illegal option|os error' | head -n 1)
+    if [ -n "$line" ]; then
+      text=$line
+      break
+    fi
   done
   if [ -z "$text" ]; then
     bin=$(command -v "$name")
