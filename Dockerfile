@@ -88,11 +88,11 @@ RUN printf '%s\n' 'path-include=/usr/share/doc/fzf/examples/*' \
     && install -m 0644 /tmp/zsh-ssh-known_hosts /etc/ssh/ssh_known_hosts \
     && install -m 0644 /tmp/zsh-ssh-50-container.conf /etc/ssh/ssh_config.d/50-container.conf \
     && rm -f /tmp/zsh-ssh-known_hosts /tmp/zsh-ssh-50-container.conf \
-    && git config --system init.defaultBranch master \
+    && git config --system init.defaultBranch main \
     && clone_pinned() { \
          _url="$1"; _dest="$2"; _sha="$3"; \
          mkdir -p "$_dest"; \
-         git -c init.defaultBranch=master init "$_dest"; \
+         git -c init.defaultBranch=main init "$_dest"; \
          git -C "$_dest" remote add origin "$_url"; \
          git -C "$_dest" fetch --depth=1 origin "$_sha"; \
          git -C "$_dest" checkout --detach FETCH_HEAD; \

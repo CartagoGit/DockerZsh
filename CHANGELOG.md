@@ -79,6 +79,9 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
   flags require a value (`--to --permissions` no longer eats `src`).
 - `useradd` wrapper treats LOGIN as the leftover positional (so
   `useradd -m alice -c "Full Name"` joins `alice` to sudo, not the comment).
+- `useradd -D` / `--defaults` is not rewritten to
+  `useradd -D -s /usr/bin/zsh` (that would *set* the default shell
+  instead of listing it). Creating a user without `-s` still gets zsh.
 - `add_text_to_*` accept `--prepend` in any position; no double `echo -e`.
 - GitHub Actions pinned to SHAs. Workflow no longer pushes `:latest`.
 - `ZSH_IMAGE_VERSION` ENV so `dockerzsh --version` stays the zsh tag if a
@@ -93,8 +96,14 @@ Order: publish zsh 2.0.0, **then** NodeBun. Do not retag 1.0.5.
   shared `.zshrc`).
 - Ubuntu Docker images drop `/usr/share/doc`; fzf key-bindings are
   kept via `path-include=/usr/share/doc/fzf/examples/*`.
-- `git init` of pinned clones sets `init.defaultBranch` so the build
-  log is not flooded with Git 2.28+ hints.
+- `git init` of pinned clones sets `init.defaultBranch=main` so the
+  build log is not flooded with Git 2.28+ hints. Runtime
+  `git config --system init.defaultBranch` is **main** (not master).
+- `dockerzsh --list --version` does not probe `ssh-from-host` /
+  `git-from-host` (helpers, not versioned binaries). `ssh --version`
+  / `-V` is treated as meta in `ssh-wrap` (no missing-keys hint).
+- Fallback `UserKnownHostsFile` is `/tmp/container-ssh-%i/known_hosts`
+  (per uid). The shared `/tmp/container-ssh-known-hosts` copy is gone.
 - `sudo-password` can change the password after one is already
   required: it escalates with `sudo` (current password), not only
   `sudo -n`. Same pattern as `sudo-nopasswd`.

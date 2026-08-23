@@ -23,7 +23,7 @@ ssh_is_meta() {
   [ $# -eq 0 ] && return 0
   for a in "$@"; do
     case "$a" in
-      -V|-h|--help|-G) return 0 ;;
+      -V|-h|--help|-G|--version) return 0 ;;
     esac
   done
   return 1

@@ -519,9 +519,11 @@ extract_tools() {
       skip["usage"] = 1
       skip["helpers"] = 1
       skip["fonts"] = 1
-      # Oh My Zsh functions, not PATH binaries.
+      # Oh My Zsh functions / image helpers, not versioned PATH binaries.
       skipcmd["extract"] = 1
       skipcmd["x"] = 1
+      skipcmd["ssh-from-host"] = 1
+      skipcmd["git-from-host"] = 1
     }
     /^##id:/ {
       cur = substr($0, 6)

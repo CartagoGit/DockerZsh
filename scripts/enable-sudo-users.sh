@@ -33,7 +33,10 @@ cat > /usr/local/sbin/useradd <<'WRAP'
 # `useradd -m alice -c "Full Name"` → alice, not "Full Name".
 real=/usr/sbin/useradd.real
 # Default login shell is zsh unless the caller passed -s/--shell.
+# Do not inject -s on -D/--defaults: `useradd -D` lists defaults;
+# `useradd -D -s …` would *set* the default shell.
 shell_given=0
+defaults_mode=0
 prev=
 for a in "$@"; do
   if [ "$prev" = 1 ]; then
@@ -42,20 +45,27 @@ for a in "$@"; do
   fi
   case "$a" in
     --shell=*) shell_given=1 ;;
+    --defaults) defaults_mode=1 ;;
     -s|--shell)
       shell_given=1
       prev=1
       ;;
-    -*s*)
-      # Combined short opts that include -s (e.g. -ms).
+    -D|--defaults)
+      defaults_mode=1
+      ;;
+    -*)
       case "$a" in
         --*) ;;
         *s*) shell_given=1; prev=1 ;;
       esac
+      case "$a" in
+        --*) ;;
+        *D*) defaults_mode=1 ;;
+      esac
       ;;
   esac
 done
-if [ "$shell_given" = 0 ]; then
+if [ "$shell_given" = 0 ] && [ "$defaults_mode" = 0 ]; then
   "$real" -s /usr/bin/zsh "$@"
 else
   "$real" "$@"
