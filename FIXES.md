@@ -88,6 +88,7 @@ El bug `ENTRYPOINT ["zsh"]` (`docker run img echo hello` → `can't open input f
 | 28 | `.gitignore` (estaba vacío) | baja | [x] |
 | 35 | `known_hosts` baked + copia/merge del host en `/tmp` | media | [x] |
 | 36 | Sin Docker dentro (ni CLI ni dockerd; hija si hace falta) | media | [x] |
+| 37 | Identidad git del host (`git-from-host` / `git-wrap`) | media | [x] |
 
 ### Abiertos (código / docs / CI)
 
@@ -126,6 +127,13 @@ El workflow pushea `IMAGE_LATEST`. El README pide pin de versión. No es un bug 
 ### 32 / 33 — parsers frágiles
 
 No pican el build (el Dockerfile pasa args completos). Pican a una hija que invoque mal el helper.
+
+### 37 — git identity
+
+SSH autentica pull/push. El autor del commit es `user.name` / `user.email`.
+Bind `~/.gitconfig:/${USER}/.gitconfig:ro` (barra inicial, mismo truco que
+`~/.ssh`). Sin eso, `git-wrap` imprime el how-to y sale 1 en
+`commit`/`merge`/`rebase`/… — no inventa `ubuntu@<id>`.
 
 ### 34 — fzf
 
@@ -168,7 +176,8 @@ Eso es el baseline. 1.0.6 lo sustituye; **no** se retaggea 1.0.5.
 | 2026-08-23 | Auditoría Hub v1.0.5. |
 | 2026-08-23 | `94d6b0f` en main: reescritura (aún sin tag). |
 | 2026-08-23 | Working tree = **1.0.6**. NodeBun unreleased pinnea **1.0.6**. Orden: Hub zsh primero. |
-| 2026-08-23 | Quitar Docker CLI (~91 MiB). `known_hosts` del bind se copia/merge; no wipe en re-run. |
+| 2026-08-23 | Sin Docker dentro (CLI/dockerd). `known_hosts` del bind se copia/merge; no wipe en re-run. |
+| 2026-08-23 | Tamaños documentados (zsh extras ~123 MB disco / ~45–55 MB Hub; NodeBun ~642 MB disco Hub 2.0.0). |
 
 ## Cola de publicación (no corre sola)
 

@@ -121,10 +121,19 @@ src=
 src=$(pick_src) || src=
 
 if [ -z "$src" ]; then
-  # Agent-only, or no keys. Empty env so wrappers are no-ops.
+  # Agent-only, or no keys. Wrappers still source env.
   mkdir -p "$dest"
   chmod 700 "$dest" 2>/dev/null || true
-  : >"$envf"
+  {
+    echo "GIT_SSH_COMMAND=/usr/local/bin/ssh"
+    echo "export GIT_SSH_COMMAND"
+    if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+      echo "CONTAINER_SSH_KEYS=ok"
+    else
+      echo "CONTAINER_SSH_KEYS=missing"
+    fi
+    echo "export CONTAINER_SSH_KEYS"
+  } >"$envf"
   chmod 600 "$envf" 2>/dev/null || true
   log "no host keys under ~/.ssh"
   exit 0
@@ -215,6 +224,12 @@ fi
   echo "export SSH_CONFIG_FILE"
   echo "GIT_SSH_COMMAND=/usr/local/bin/ssh"
   echo "export GIT_SSH_COMMAND"
+  if [ -n "$identities" ] || [ -n "${SSH_AUTH_SOCK:-}" ]; then
+    echo "CONTAINER_SSH_KEYS=ok"
+  else
+    echo "CONTAINER_SSH_KEYS=missing"
+  fi
+  echo "export CONTAINER_SSH_KEYS"
 } >"$envf"
 chmod 600 "$envf"
 

@@ -39,6 +39,31 @@ There is **no** `openssh-server`. There is **no** `ENTRYPOINT`: the process you 
 
 **Not in this image** (keep it a shell base): `gcc`/`g++`, `python3`, `neovim`, `git-lfs`, `rclone`, `locales`, `man-db`, `nmap`, **no sshd**, **no Docker** (`dockerd` / `docker` CLI). Put compilers — or a Docker client — in a child image. Drive this container with `docker` on the **host**.
 
+The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…). Extra toys (`tcpdump`/`iperf3`/`htpasswd`) stay because they are small. Do **not** add `git-lfs`, `rclone`, `neovim`, or a Docker client here.
+
+---
+
+## 📏 Image size
+
+| | Uncompressed (disk / `docker images`) | Compressed (Hub pull / layers) |
+|---|---|---|
+| `ubuntu:24.04` | ~78 MB | ~28 MB |
+| Hub `zsh:v1.0.5` | ~205 MB | ~76 MB |
+| This tree (`v1.0.6`) | ~**240–260 MB** | ~**110–125 MB** |
+
+v1.0.5 was zsh + eza/bat/git and little else. v1.0.6 adds the daily-driver apt kit on top of that.
+
+| Slice | Uncompressed | Compressed (gzip of debs, order of magnitude) |
+|---|---|---|
+| Named extras only (`fd`/`rg`/`fzf`/archives/…) | ~53 MB | ~18 MB debs |
+| Those extras + their apt deps, minus the core already in v1.0.5 | ~**123 MB** | ~**38 MB** debs → ~**45–55 MB** extra on Hub |
+| Heaviest unique dep | `libicu74` ~35 MB (`xmllint` / `libxml2`) | ~10 MB |
+| Docker CLI (dropped) | would have been ~91 MB | ~27 MB |
+
+`docker images` is uncompressed. Hub pull is gzip layers (smaller). Oh My Zsh + p10k clones are in both 1.0.5 and 1.0.6.
+
+Exact Hub bytes for **v1.0.6** appear after the first tagged push. Until then the table is measured from Ubuntu 24.04 package metadata + Hub v1.0.5.
+
 ---
 
 ## ▶️ How to run it
@@ -173,16 +198,23 @@ services:
     image: cartagodocker/zsh:v1.0.6
     volumes:
       - ~/.ssh:/${USER}/.ssh:ro
+      - ~/.gitconfig:/${USER}/.gitconfig:ro
 ```
 
 ```bash
 docker run --rm -it \
   -v "$HOME/.ssh:/$USER/.ssh:ro" \
+  -v "$HOME/.gitconfig:/$USER/.gitconfig:ro" \
   cartagodocker/zsh:v1.0.6
 # inside: ssh git@github.com
+#         git commit   # author = host user.name, not ubuntu@id
 ```
 
 `${USER}` is the **host** name. Docker needs an **absolute** target (`/${USER}/.ssh` → `/cartago/.ssh`), not `${USER}/.ssh`. That path is not `$HOME` in the container. The client finds any bind ending in `.ssh`, copies keys to a `700` dir this uid owns (OpenSSH rejects `644`/`777` and cannot write `known_hosts` on `:ro`), and `ssh`/`git` just work as root or as any other user.
+
+**Git author is not the SSH key.** `git pull` / `git push` use the key. `git commit` needs `user.name` + `user.email`. Bind host `~/.gitconfig` the same way (or set `GIT_AUTHOR_NAME` + `GIT_AUTHOR_EMAIL`). The container path can be any absolute folder (`/${USER}/.gitconfig`, `/mnt/host-gitconfig`, …) as long as it ends in `.gitconfig`. Without that, `git commit` says identity is required (with an example) and exits `1` instead of inventing `ubuntu@<container>`.
+
+Missing SSH keys: `ssh`/`scp`/`sftp` print that **keys are required**, with the usual bind example and a note that another directory is fine, then OpenSSH still runs.
 
 **`known_hosts` — bringing the host file is optional, not required:**
 

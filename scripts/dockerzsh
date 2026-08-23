@@ -227,11 +227,16 @@ Network
 
   ssh / scp / sftp
       OpenSSH **client** only — there is no sshd in this image.
-      Bind-mount host ~/.ssh (Compose: ~/.ssh:/${USER}/.ssh:ro —
-      Docker needs the leading /) and type `ssh`. The wrapper finds
-      that bind even when it is not $HOME (${USER} is the host name),
-      copies keys into a 700 dir this uid owns, and works as root or
-      any other user.
+      Bind-mount host keys and type `ssh`. Destination can be any
+      absolute path ending in .ssh (not only $HOME). Usual example:
+
+        volumes:
+          - ~/.ssh:/${USER}/.ssh:ro
+        # or another folder: ~/.ssh:/mnt/host-ssh:ro
+
+      Docker needs the leading / (${USER} is the host name). The
+      wrapper finds that bind, copies keys into a 700 dir this uid
+      owns, and works as root or any other user.
 
       known_hosts — two layers; bringing the host file is optional:
         1. Official GitHub/GitLab keys baked in the image:
@@ -245,8 +250,14 @@ Network
            keep container-learned hosts. Without a host file, the
            baked keys still cover github.com / gitlab.com.
 
-      docker run -v ~/.ssh:/$USER/.ssh:ro -it IMAGE
+      docker run -v ~/.ssh:/$USER/.ssh:ro \
+                 -v ~/.gitconfig:/$USER/.gitconfig:ro -it IMAGE
       ssh git@github.com
+      git commit
+
+      No keys and no SSH_AUTH_SOCK: ssh-wrap says keys are required
+      (example bind + “any folder ending in .ssh”), then OpenSSH
+      still runs (its own error).
 
   ssh-from-host
       Copy host keys now (also runs from zshrc / profile.d / ssh).
@@ -316,18 +327,22 @@ System / git / process
       Commits need user.name + user.email. The SSH key does not
       provide them. The image does not bake a name. Same contract
       as ssh: bind the host file once (or set GIT_AUTHOR_NAME +
-      GIT_AUTHOR_EMAIL). git-from-host writes a tiny global config
-      under /tmp/container-git-<uid>/; git-wrap loads it.
+      GIT_AUTHOR_EMAIL). Destination can be any absolute path
+      ending in .gitconfig. git-from-host writes a tiny global
+      config under /tmp/container-git-<uid>/; git-wrap loads it.
+      Without an identity, `git commit` says identity is required
+      (example + other-folder) and exits 1 (no ubuntu@<container>).
 
         volumes:
           - ~/.ssh:/${USER}/.ssh:ro
           - ~/.gitconfig:/${USER}/.gitconfig:ro
+        # or: ~/.gitconfig:/mnt/host-gitconfig:ro
 
       git config user.name     # should match the host
       git commit               # author is that name, not ubuntu@id
 
   git-from-host
-      Copy host identity now (also runs from zshrc / profile.d / git).
+      Copy host identity now (also from zshrc / profile.d / git).
       GIT_FROM_HOST_VERBOSE=1 to see the path. You do not need to
       call this yourself.
 
@@ -473,6 +488,11 @@ Image helpers (this image — not Ubuntu packages)
       Drop the optional password and restore NOPASSWD (image default).
       Needs root, or sudo with the current password.
 
+  git-from-host
+      Import host user.name / user.email (also from zshrc / git).
+      Bind any …/.gitconfig (example: ~/.gitconfig:/${USER}/.gitconfig:ro).
+      Verbose: GIT_FROM_HOST_VERBOSE=1.
+
   dockerzsh
       This catalogue.
 
@@ -496,6 +516,12 @@ Not in this image (use a child image): gcc/g++/python3, neovim, git-lfs,
 rclone, locales, man-db, nmap. No sshd. No Docker (dockerd / docker
 CLI) — install that in a child if you need it. tcpdump/iperf3
 often need extra Linux capabilities (NET_RAW / NET_ADMIN / host network).
+
+Size (order of magnitude, amd64): ubuntu:24.04 ~78 MB disk / ~28 MB Hub.
+Hub zsh v1.0.5 ~205 MB disk / ~76 MB Hub. This tree (v1.0.6) is about
++45-55 MB on Hub for the daily CLI extras (~123 MB uncompressed with
+deps; libicu74 from xmllint is the fat one). docker images = disk;
+Hub pull = gzip layers.
 EOF
 }
 
