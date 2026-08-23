@@ -29,9 +29,9 @@ Pin **`v2.0.0`**. There is no `latest`.
 | 🐧 | OS | Ubuntu 24.04 LTS (Noble) |
 | 🐚 | Interactive shell | zsh + Oh My Zsh + Powerlevel10k — `CMD ["/usr/bin/zsh"]` |
 | 💻 | Other shells | `bash` and `sh` (dash) stay installed |
-| 📂 | Listing / pager | `eza` (ls), `bat` (cat), GNU `find` + `fd`, `rg`, `nnn`, `ncdu`/`duf` |
-| 🧰 | Daily CLI | archives, `jq`/`jo`/`sqlite3`, `ip`/`ss`/`openssl`, `tmux`, `make`, `vi`/`nano`, `fzf`/`zoxide` — see `dockerzsh --help` |
-| 📖 | Catalogue | `dockerzsh --help` — lists every tool; filter with `dockerzsh --shells` (see [Catalogue CLI](#catalogue-cli-dockerzsh)) |
+| 📂 | Listing / pager | `eza` (`ls`), `bat`, GNU `find` + `fd`, `rg`, `less`, `tree`, `nnn`, `ncdu`, `duf` — [Utilities](#utilities) |
+| 🧰 | Daily CLI | Full inventory (every extra binary + our helpers): [Utilities](#utilities) |
+| 📖 | Catalogue | `dockerzsh --help` — same inventory inside the container (see [Catalogue CLI](#catalogue-cli-dockerzsh)) |
 | 🌐 | Network | `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`**, `ip`/`ss`, `socat`, `tcpdump` |
 | 🔐 | sudo | NOPASSWD for every uid (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`) |
 | 🌍 | Locale | `LANG=C.UTF-8` · `LC_ALL=C.UTF-8` |
@@ -43,7 +43,140 @@ There is **no** `openssh-server`. There is **no** `ENTRYPOINT`: the process you 
 
 Container IP: `ip -4 addr`. DNS in use: `/etc/resolv.conf`. Resolve a name: `getent hosts github.com` (same resolver as `curl`/`git`).
 
-The daily CLI is already the useful set (`fd`/`rg`/`fzf`/`jq`/`unzip`/`tmux`/…). Extra toys (`tcpdump`/`htpasswd`) stay because they are small. Do **not** add `git-lfs`, `rclone`, `neovim`, or a Docker client here.
+The daily CLI is the set in [Utilities](#utilities) (`fd`, `rg`, `fzf`, `jq`, `unzip`, `tmux`, and the rest of that table). Extra toys (`tcpdump`, `htpasswd`) stay because they are small. Do **not** add `git-lfs`, `rclone`, `neovim`, or a Docker client here.
+
+---
+
+## 🧰 Utilities
+
+This page is the contract for people **using** the image. Every extra CLI we install is in the tables below (Ubuntu 24.04 already has `cp`, `mv`, `grep`, `awk`, `sed`, `find`, `top`, … — those are not repeated).
+
+Upstream tools: one-line what-it-is + a docs link. **Our** helpers (`add_text_to_zshrc`, `sudo-password`, …) are documented in this README — do not look for an Ubuntu man page.
+
+Inside a running container the same inventory is `dockerzsh --help` (filter with `dockerzsh --listing`, `dockerzsh --helpers`, …).
+
+### Shells
+
+| Tool | What | Docs |
+|---|---|---|
+| `zsh` | Default interactive shell. Oh My Zsh + Powerlevel10k. This is `CMD`. | [zsh](https://zsh.sourceforge.io/Doc/) · [Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh) · [p10k](https://github.com/romkatv/powerlevel10k) |
+| `bash` | GNU bash. `docker run IMAGE bash` or type `bash` inside zsh. | [manual](https://www.gnu.org/software/bash/manual/) |
+| `sh` | POSIX sh (dash on Ubuntu). | [dash](https://manpages.ubuntu.com/manpages/noble/en/man1/dash.1.html) |
+
+Oh My Zsh plugins in the image: `git`, `extract` (`extract` / `x`), `sudo`, `zsh-autosuggestions`, `zsh-completions`, `zsh-syntax-highlighting`, `zsh-bat`.
+
+### Listing / viewing
+
+| Tool | What | Docs |
+|---|---|---|
+| `eza` | Modern `ls` (colours, git, icons). Aliased as `ls` in interactive zsh. GNU `ls` stays `/usr/bin/ls`. | [eza](https://github.com/eza-community/eza) |
+| `bat` | Syntax-highlighting `cat`. Debian name is `batcat`; `/usr/local/bin/bat` → `batcat`. | [bat](https://github.com/sharkdp/bat) |
+| `fd` | Fast `find` (Debian name `fdfind`). GNU `find` stays `find`. | [fd](https://github.com/sharkdp/fd) |
+| `rg` | Fast recursive grep (ripgrep). Honours `.gitignore`. | [ripgrep](https://github.com/BurntSushi/ripgrep) |
+| `less` | Pager (`git log` / `git diff`). `q` to quit. | [less](https://www.greenwoodsoftware.com/less/) |
+| `tree` | Directory tree. `eza --tree` is the colour alternative. | [tree](https://oldmanprogrammer.net/source.php?dir=projects/tree) |
+| `nnn` | Terminal file manager. | [nnn](https://github.com/jarun/nnn) |
+| `ncdu` | Interactive disk usage. | [ncdu](https://dev.yorhel.nl/ncdu) |
+| `duf` | Colourful `df`. | [duf](https://github.com/muesli/duf) |
+
+### Edit / data
+
+| Tool | What | Docs |
+|---|---|---|
+| `nano` | Small terminal editor. Ctrl+O save, Ctrl+X quit. | [nano](https://www.nano-editor.org/dist/latest/nano.html) |
+| `vi` | `vim-tiny`. Not neovim (put that in a child). | [vim.tiny](https://manpages.ubuntu.com/manpages/noble/en/man1/vim.tiny.1.html) |
+| `jq` | Query / transform JSON. | [jq manual](https://jqlang.github.io/jq/manual/) |
+| `jo` | Build JSON from arguments. | [jo](https://github.com/jpmens/jo) |
+| `sqlite3` | SQLite CLI. | [sqlite3](https://www.sqlite.org/cli.html) |
+| `hexdump` / `xxd` | Dump file bytes. `xxd -r` reverses a dump. | [hexdump](https://manpages.ubuntu.com/manpages/noble/en/man1/hexdump.1.html) · [xxd](https://manpages.ubuntu.com/manpages/noble/en/man1/xxd.1.html) |
+| `bc` | Arbitrary-precision calculator. | [bc](https://www.gnu.org/software/bc/manual/html_mono/bc.html) |
+| `column` | Align columns (`bsdextrautils`). | [column](https://manpages.ubuntu.com/manpages/noble/en/man1/column.1.html) |
+
+### Archives / text
+
+| Tool | What | Docs |
+|---|---|---|
+| `unzip` / `zip` | zip archives. | [unzip](https://manpages.ubuntu.com/manpages/noble/en/man1/unzip.1.html) · [zip](https://manpages.ubuntu.com/manpages/noble/en/man1/zip.1.html) |
+| `tar` / `gzip` | From Ubuntu. `tar -xzf archive.tar.gz`. | [tar](https://www.gnu.org/software/tar/manual/) · [gzip](https://www.gnu.org/software/gzip/manual/gzip.html) |
+| `xz` | `.xz` / `.lzma`. | [xz](https://tukaani.org/xz/) |
+| `bzip2` | `.bz2`. | [bzip2](https://sourceware.org/bzip2/manual/manual.html) |
+| `zstd` | `.zst`. | [zstd](https://github.com/facebook/zstd) |
+| `lz4` | `.lz4`. | [lz4](https://github.com/lz4/lz4) |
+| `pigz` | Parallel gzip. | [pigz](https://zlib.net/pigz/) |
+| `cpio` | cpio archives. | [cpio](https://www.gnu.org/software/cpio/manual/) |
+| `cabextract` | Windows `.cab`. | [cabextract](https://www.cabextract.org.uk/) |
+| `extract` / `x` | Oh My Zsh helper: picks unzip/tar/zstd from the extension. | [extract plugin](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/extract) |
+| `uchardet` | Detect text encoding. | [uchardet](https://www.freedesktop.org/wiki/Software/uchardet/) |
+| `dos2unix` | CRLF → LF (Windows bind mounts). | [dos2unix](https://waterlan.home.xs4all.nl/dos2unix.html) |
+
+### Network
+
+| Tool | What | Docs |
+|---|---|---|
+| `curl` / `wget` | HTTP(S). `ca-certificates` is installed. | [curl](https://curl.se/docs/manpage.html) · [wget](https://www.gnu.org/software/wget/manual/wget.html) |
+| `ssh` / `scp` / `sftp` | OpenSSH **client** only (no sshd). Bind host `~/.ssh` — [SSH](#ssh-client-only--no-sshd). | [ssh](https://man.openbsd.org/ssh.1) |
+| `ping` | ICMP. Often needs `--cap-add NET_RAW`. | [ping](https://manpages.ubuntu.com/manpages/noble/en/man8/ping.8.html) |
+| `tracepath` | Path MTU without root. | [tracepath](https://manpages.ubuntu.com/manpages/noble/en/man8/tracepath.8.html) |
+| `fping` | Fast multi-host ping. | [fping](https://fping.org/) |
+| `whois` | WHOIS. | [whois](https://manpages.ubuntu.com/manpages/noble/en/man1/whois.1.html) |
+| `mtr` | traceroute + ping TUI (`mtr-tiny`). | [mtr](https://www.bitwizard.nl/mtr/) |
+| `traceroute` | Classic traceroute. | [traceroute](https://manpages.ubuntu.com/manpages/noble/en/man8/traceroute.8.html) |
+| `rsync` | Copy trees over ssh or locally. | [rsync](https://download.samba.org/pub/rsync/rsync.1) |
+| `nc` | netcat (`netcat-openbsd`). | [nc](https://man.openbsd.org/nc.1) |
+| `socat` | Bidirectional relay (unix sockets, TLS, exec). | [socat](http://www.dest-unreach.org/socat/doc/socat.html) |
+| `ip` / `ss` | iproute2. Container IP: `ip -4 addr`. DNS: `/etc/resolv.conf`. Resolve: `getent hosts github.com` (no `dig`). | [ip](https://manpages.ubuntu.com/manpages/noble/en/man8/ip.8.html) · [ss](https://manpages.ubuntu.com/manpages/noble/en/man8/ss.8.html) |
+| `openssl` | TLS, certs, digests. `openssl s_client -connect host:443`. | [openssl](https://www.openssl.org/docs/manpages.html) |
+| `tcpdump` | Packet capture. Usually needs `NET_RAW` / `NET_ADMIN`. | [tcpdump](https://www.tcpdump.org/manpages/tcpdump.1.html) |
+| `htpasswd` / `ab` | apache2-utils: basic-auth files; tiny HTTP bench. | [htpasswd](https://httpd.apache.org/docs/2.4/programs/htpasswd.html) · [ab](https://httpd.apache.org/docs/2.4/programs/ab.html) |
+
+### System / git / process
+
+| Tool | What | Docs |
+|---|---|---|
+| `git` / `tig` | git + TUI. SSH remotes: [SSH](#ssh-client-only--no-sshd). Commits need `user.name` / `user.email` (bind `~/.gitconfig`). | [git](https://git-scm.com/docs) · [tig](https://jonas.github.io/tig/doc/manual.html) |
+| `make` | GNU make. No `gcc`/`g++` in this image. | [make](https://www.gnu.org/software/make/manual/make.html) |
+| `envsubst` | Expand `$VARS` in files (`gettext-base`). | [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html) |
+| `htop` | Interactive process viewer (`top` is already in Ubuntu). | [htop](https://htop.dev/) |
+| `lsof` | Open files / sockets. `lsof -i :3000`. | [lsof](https://manpages.ubuntu.com/manpages/noble/en/man8/lsof.8.html) |
+| `killall` | Kill by name (`psmisc`). Also `pstree`, `fuser`. | [killall](https://manpages.ubuntu.com/manpages/noble/en/man1/killall.1.html) |
+| `pv` | Pipe progress. | [pv](https://www.ivarch.com/programs/pv.shtml) |
+| `sponge` | moreutils: write a file only after stdin ends. | [sponge](https://manpages.ubuntu.com/manpages/noble/en/man1/sponge.1.html) |
+| `uuidgen` | Generate UUIDs. | [uuidgen](https://manpages.ubuntu.com/manpages/noble/en/man1/uuidgen.1.html) |
+| `getfacl` / `setfacl` | POSIX ACLs. | [getfacl](https://manpages.ubuntu.com/manpages/noble/en/man1/getfacl.1.html) |
+| `getcap` / `setcap` | File capabilities (`libcap2-bin`). | [setcap](https://manpages.ubuntu.com/manpages/noble/en/man8/setcap.8.html) |
+| `inotifywait` | Watch files (`inotify-tools`). | [inotifywait](https://manpages.ubuntu.com/manpages/noble/en/man1/inotifywait.1.html) |
+| `entr` | Run a command when files change. | [entr](https://eradman.com/entrproject/) |
+| `strace` | Trace syscalls. | [strace](https://man7.org/linux/man-pages/man1/strace.1.html) |
+| `progress` | Progress of an already-running `cp`/`mv`/`dd`. | [progress](https://github.com/Xfennec/progress) |
+| `tmux` | Terminal multiplexer. | [tmux](https://github.com/tmux/tmux/wiki) |
+| `keychain` | ssh-agent helper across shells. | [keychain](https://www.funtoo.org/Funtoo:Keychain) |
+| `sudo` | Passwordless by default. Opt-in password: [sudo](#sudo). | [sudo](https://www.sudo.ws/docs/man/sudo.man/) |
+
+### Extras
+
+| Tool | What | Docs |
+|---|---|---|
+| `fzf` | Fuzzy finder. Interactive zsh: Ctrl-R / Ctrl-T / Alt-C. Also a pipe filter. | [fzf](https://github.com/junegunn/fzf) |
+| `zoxide` | Smarter `cd`; command is `z`. | [zoxide](https://github.com/ajeetdsouza/zoxide) |
+| `colordiff` | Colourful `diff`. | [colordiff](https://www.colordiff.org/) |
+| `patch` | Apply unified diffs. | [patch](https://www.gnu.org/software/diffutils/manual/html_node/Invoking-patch.html) |
+
+### Image helpers (ours — usage in this README)
+
+These are not Ubuntu packages. Full CLI: [Scripts for child images](#scripts-for-child-images) and [sudo](#sudo). Catalogue: `dockerzsh --helpers`.
+
+| Command | What |
+|---|---|
+| `add_text_to_zshrc` | Append/prepend to the shared `/usr/share/globally/.zshrc`. |
+| `add_text_to_p10k` | Same, writes `.p10k.zsh`. |
+| `share_config_globally` | Move a path into `/usr/share` and symlink it for every home + `/etc/skel`. |
+| `sudo-password` | Require (or change) a sudo password at runtime. |
+| `sudo-nopasswd` | Back to NOPASSWD. |
+| `ssh-from-host` | Copy host SSH keys into a uid-owned `700` dir. Also runs from zshrc / `ssh`. You do not type this. |
+| `git-from-host` | Import host `user.name` / `user.email`. Also runs from zshrc / `git`. You do not type this. |
+| `dockerzsh` | This image’s catalogue CLI. |
+
+`ssh` / `scp` / `sftp` / `git` on `PATH` are thin wrappers (`ssh-wrap` / `git-wrap`) around those helpers. Type the normal commands.
 
 ---
 
@@ -291,18 +424,18 @@ dockerzsh shells --version | shells -v
 dockerzsh eza --version | eza -v
 ```
 
-| Id | Section |
+| Id | Section (every tool — same list as [Utilities](#utilities)) |
 |---|---|
 | `about` | What this image is (CMD, no ENTRYPOINT, TTY vs keep-alive) |
 | `usage` | How to invoke `dockerzsh` |
-| `shells` | `zsh` / `bash` / `sh` |
-| `listing` | `eza`, `bat`, `fd`, `rg`, `nnn`, `ncdu`, `duf`, … |
-| `edit` | `nano`, `vi`, `jq`, `jo`, `sqlite3`, … |
-| `archives` | zip/tar/`extract`, `dos2unix`, … |
-| `network` | `curl`, `ssh`/`scp`/`sftp`, `ip`/`ss`, `socat`, … |
-| `system` | `git`, `htop`, `tmux`, `sudo`, … |
+| `shells` | `zsh`, `bash`, `sh` |
+| `listing` | `eza`, `bat`, `fd`, `rg`, `less`, `tree`, `nnn`, `ncdu`, `duf` |
+| `edit` | `nano`, `vi`, `jq`, `jo`, `sqlite3`, `hexdump`/`xxd`, `bc`, `column` |
+| `archives` | `unzip`/`zip`, `tar`/`gzip`, `xz`, `bzip2`, `zstd`, `lz4`, `pigz`, `cpio`, `cabextract`, `extract`/`x`, `uchardet`, `dos2unix` |
+| `network` | `curl`/`wget`, `ssh`/`scp`/`sftp`, `ping`, `tracepath`, `fping`, `whois`, `mtr`, `traceroute`, `rsync`, `nc`, `socat`, `ip`/`ss`, `openssl`, `tcpdump`, `htpasswd`/`ab` |
+| `system` | `git`/`tig`, `make`, `envsubst`, `htop`, `lsof`, `killall`, `pv`, `sponge`, `uuidgen`, `getfacl`/`setfacl`, `getcap`/`setcap`, `inotifywait`, `entr`, `strace`, `progress`, `tmux`, `keychain`, `sudo` |
 | `extras` | `fzf`, `zoxide`, `colordiff`, `patch` |
-| `helpers` | `add_text_to_zshrc`, `share_config_globally`, `sudo-password`, … |
+| `helpers` | `add_text_to_zshrc`, `add_text_to_p10k`, `share_config_globally`, `sudo-password`, `sudo-nopasswd`, `git-from-host`, `dockerzsh` |
 | `fonts` | Host fonts + what is **not** in this image |
 
 Unknown ids exit `2` and point at `--sections`. `--shells` and `shells` are the same id (`listing` also accepts `--ls`).

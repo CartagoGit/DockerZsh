@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- README “What's in the image” no longer truncates the daily CLI
+  (`…`). New **Utilities** section lists every extra binary with a
+  docs link; image helpers (`add_text_to_*`, `sudo-password`, …)
+  are documented in this README. Catalogue CLI table matches.
+
 ## [2.0.0] - 2026-08-23
 
 Major bump from **v1.0.5**: CMD without ENTRYPOINT, sudo, UTF-8,
